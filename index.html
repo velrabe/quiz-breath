@@ -48,72 +48,122 @@
 
     <header class="hero" role="banner">
       <div class="hero__inner">
-        <div class="hero__content">
-          <h1 class="hero__title">На одном дыхании</h1>
-          <p class="hero__subtitle">
-            Развеиваем мифы о бронхиальной астме в игровом формате.
-          </p>
-          <a class="hero-cta" href="#quiz-stage">Пройти квиз</a>
+        <div class="hero__body">
+          <div class="hero__content">
+            <h1 class="hero__title">На одном дыхании</h1>
+            <p class="hero__subtitle">
+              Развеиваем мифы о бронхиальной астме в игровом формате.
+            </p>
+            <div class="hero__cta-row">
+              <a class="hero-cta" href="#page-content-inner">Пройти квиз</a>
+              <div class="hero-promo" role="note" aria-label="Приз за прохождение квиза">
+                <div class="hero-promo__ticket">
+                  <img
+                    class="hero-promo__icon"
+                    src="img/hero/gift.svg"
+                    width="48"
+                    height="48"
+                    alt=""
+                    decoding="async"
+                  />
+                  <div class="hero-promo__text">
+                    <span class="hero-promo__line">Пройди квиз и выиграй</span>
+                    <span class="hero-promo__line">Билеты в Панда-парк</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </header>
 
-    <main>
+    <div class="page-content">
+      <div class="page-content__inner" id="page-content-inner">
+    <main class="page-main">
       <div id="quiz-stage" class="quiz-stage">
-      <!-- Старт -->
-      <section id="screen-intro" class="screen" aria-labelledby="intro-title">
-        <h2 id="intro-title" class="screen-intro-heading">Квиз</h2>
-        <p class="subtitle screen-intro-lead">
-          Свайпайте карточки или пользуйтесь кнопками «Миф» / «Правда».
-        </p>
-
-        <label class="consent">
-          <input type="checkbox" id="consent-rules" />
-          <span
-            >Согласен(на) с
-            <a href="#section-rules">правилами участия в розыгрыше</a> и обработкой
-            персональных данных в рамках этого проекта.</span
-          >
-        </label>
-
-        <div class="actions">
-          <button type="button" class="btn-primary" id="btn-start" disabled>
-            Начать квиз
-          </button>
+      <!-- Старт: та же сетка, что у квиза; без карточки — только зарезервированное место -->
+      <section
+        id="screen-intro"
+        class="screen screen--quiz-layout"
+        aria-label="Начало квиза"
+      >
+        <div class="quiz-top quiz-top--intro">
+          <p class="screen-intro-count">14 вопросов</p>
+        </div>
+        <div class="quiz-card-area quiz-card-area--intro">
+          <div class="screen-intro__body">
+            <div class="actions screen-intro__actions">
+              <button type="button" class="btn-primary" id="btn-start">
+                Начать квиз
+              </button>
+            </div>
+            <p class="subtitle screen-intro-lead">
+              Свайпайте карточки или пользуйтесь кнопками «Миф» / «Правда».
+            </p>
+          </div>
+        </div>
+        <div class="quiz-bottom quiz-bottom--intro">
+          <p class="swipe-hint swipe-hint--invisible" aria-hidden="true">
+            &nbsp;
+          </p>
         </div>
       </section>
 
       <!-- Квиз -->
-      <section id="screen-quiz" class="screen" hidden aria-live="polite">
+      <section
+        id="screen-quiz"
+        class="screen screen--quiz"
+        hidden
+        aria-live="polite"
+      >
         <div class="quiz-top">
           <span id="quiz-progress">Вопрос 1 из 14</span>
         </div>
-        <div class="card-wrap">
-          <div id="quiz-card">
-            <p id="card-question-text"></p>
+        <div class="quiz-card-area">
+          <div class="card-wrap">
+            <div id="quiz-card">
+              <p id="card-question-text"></p>
+            </div>
           </div>
         </div>
-        <p class="swipe-hint">Смахните карточку или нажмите кнопку</p>
-        <div class="quiz-buttons">
-          <button type="button" class="btn-myth" id="btn-myth">Миф</button>
-          <button type="button" class="btn-truth" id="btn-truth">Правда</button>
+        <div class="quiz-bottom">
+          <div class="quiz-buttons quiz-buttons--main">
+            <button type="button" class="btn-myth" id="btn-myth">Миф</button>
+            <button type="button" class="btn-truth" id="btn-truth">Правда</button>
+          </div>
+          <p class="swipe-hint">Смахните карточку или нажмите кнопку</p>
         </div>
       </section>
 
-      <!-- Пояснение -->
-      <section id="screen-feedback" class="screen" hidden>
-        <p class="feedback-head" id="feedback-title"></p>
-        <p id="feedback-explanation"></p>
-
-        <div class="sources-block">
-          <p class="sources-heading">Источники и ссылки</p>
-          <div id="feedback-sources" class="sources-tags"></div>
+      <!-- Пояснение: та же сетка, что у screen-quiz -->
+      <section id="screen-feedback" class="screen screen--quiz" hidden>
+        <div class="quiz-top">
+          <p class="feedback-head" id="feedback-title"></p>
         </div>
-
-        <div class="quiz-buttons quiz-buttons--feedback">
-          <button type="button" class="btn-primary" id="btn-feedback-next">
-            Далее
-          </button>
+        <div class="quiz-card-area">
+          <div class="card-wrap">
+            <div id="feedback-card" class="quiz-card quiz-card--feedback">
+              <p id="feedback-explanation"></p>
+              <div class="sources-block">
+                <p class="sources-heading">Источники и ссылки</p>
+                <div id="feedback-sources" class="sources-tags"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="quiz-bottom">
+          <div class="quiz-buttons quiz-buttons--main">
+            <button type="button" class="btn-primary" id="btn-feedback-next">
+              Далее
+            </button>
+          </div>
+          <p
+            id="feedback-swipe-hint"
+            class="swipe-hint swipe-hint--feedback-next"
+          >
+            Смахните влево или вправо — следующий вопрос
+          </p>
         </div>
       </section>
 
@@ -131,9 +181,22 @@
           <button type="button" class="btn-primary" id="btn-to-form">
             Участвовать в розыгрыше
           </button>
-          <button type="button" class="btn" id="btn-learn-more">
-            Узнать подробнее по теме
-          </button>
+          <a
+            class="result-partner"
+            id="link-learn-more"
+            href="https://kartazhizni.ru/ba-u-detey/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              class="result-partner__logo"
+              src="img/partners/karta-zhizni.svg"
+              width="160"
+              height="32"
+              alt="Карта жизни"
+            />
+            <span class="result-partner__label">Узнать подробнее по теме</span>
+          </a>
         </div>
       </section>
 
@@ -165,8 +228,25 @@
             autocomplete="tel"
           />
 
+          <label class="consent consent--form">
+            <input type="checkbox" id="consent-form-data" required />
+            <span
+              >Согласен(на) с
+              <a
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="form-rules-link"
+                >правилами участия в розыгрыше</a
+              >
+              и обработкой персональных данных при отправке этой формы.</span
+            >
+          </label>
+
           <div class="actions">
-            <button type="submit" class="btn-primary">Отправить</button>
+            <button type="submit" class="btn-primary" id="btn-lead-submit">
+              Отправить
+            </button>
             <button type="button" class="btn" id="btn-skip-form">
               Пропустить, перейти на сайт
             </button>
@@ -176,45 +256,46 @@
 
       </div>
     </main>
+      </div>
 
     <div class="footer-banners" aria-label="Рекламный баннер">
-      <div class="banner-ad banner-ad--rect">
-        <div
-          class="banner-text"
-          contenteditable="true"
-          spellcheck="true"
-        >
-          Прямоугольный баннер 200×ширина контейнера — ваш текст
-        </div>
+      <div class="banner-ad banner-ad--ratio">
+        <img
+          class="banner-ad__img"
+          src="img/banners/footer-ad-placeholder.svg"
+          alt=""
+          width="1200"
+          height="600"
+          decoding="async"
+        />
       </div>
+    </div>
     </div>
 
     <footer class="site-footer" id="footer">
-      <nav aria-label="Юридическая информация">
-        <a href="#privacy">Конфиденциальность</a>
-        <a href="#terms">Пользовательское соглашение</a>
-        <a href="#section-rules">Правила розыгрыша</a>
-      </nav>
-      <div class="legal-placeholder">
-        <p id="privacy">
-          <strong>Политика конфиденциальности.</strong> Здесь будет текст,
-          аналогичный размещённому на Мамадо: обработка данных, цели, сроки
-          хранения. Заполните перед публикацией.
-        </p>
-        <p id="terms">
-          <strong>Пользовательское соглашение.</strong> Условия использования
-          страницы и квиза — заглушка для прототипа.
-        </p>
-        <p id="section-rules">
-          <strong>Правила розыгрыша.</strong> Сроки, призы, количество
-          победителей, способ определения — по шаблону организатора. Период
-          размещения квиза по ТЗ: 20.04 – 19.05.
-        </p>
+      <div class="site-footer__row">
+        <nav
+          class="site-footer__nav"
+          aria-label="Юридическая информация"
+        >
+          <!-- Подставьте URL документов, как на основном сайте -->
+          <a href="#" target="_blank" rel="noopener noreferrer"
+            >Политика конфиденциальности</a
+          >
+          <a href="#" target="_blank" rel="noopener noreferrer"
+            >Пользовательское соглашение</a
+          >
+          <a href="#" target="_blank" rel="noopener noreferrer"
+            >Правила розыгрыша</a
+          >
+        </nav>
+        <p class="site-footer__corner" aria-hidden="true"></p>
       </div>
     </footer>
 
     <script src="js/questions.js"></script>
     <script src="js/parallax.js"></script>
+    <script src="js/hero-inner-parallax.js"></script>
     <script src="js/app.js"></script>
   </body>
 </html>

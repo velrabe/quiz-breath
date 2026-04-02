@@ -11,7 +11,6 @@
     result: document.getElementById('screen-result'),
     form: document.getElementById('screen-form'),
 
-    consent: document.getElementById('consent-rules'),
     btnStart: document.getElementById('btn-start'),
 
     card: document.getElementById('quiz-card'),
@@ -24,6 +23,7 @@
     feedbackExplain: document.getElementById('feedback-explanation'),
     feedbackSources: document.getElementById('feedback-sources'),
     btnNext: document.getElementById('btn-feedback-next'),
+    feedbackSwipeHint: document.getElementById('feedback-swipe-hint'),
 
     resultTier: document.getElementById('result-tier-message'),
     resultScore: document.getElementById('result-score'),
@@ -38,6 +38,9 @@
   let touchStartY = 0;
   let cardOffsetX = 0;
   const SWIPE_THRESHOLD = 80;
+  let cardAnimating = false;
+  const FLY_OUT_MS = 400;
+  const FEEDBACK_HINT_SWIPE = 56;
 
   function createLinkOutIcon() {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -149,6 +152,7 @@
     const q = questions[index];
     el.cardText.textContent = q.text;
     el.cardText.style.color = '';
+    el.card.style.transition = '';
     el.card.style.transform = '';
     el.card.style.opacity = '1';
     cardOffsetX = 0;
@@ -200,17 +204,91 @@
     }
   }
 
+  function flyCardOutAndAnswer(choice) {
+    if (cardAnimating || !el.card) return;
+    cardAnimating = true;
+    const dir = choice === 'myth' ? -1 : 1;
+    updateCardTextTint(dir * CARD_TINT_MAX);
+    const dist = window.innerWidth * 0.55 + 140;
+    el.card.style.transition = `transform ${FLY_OUT_MS}ms cubic-bezier(0.33, 0, 0.2, 1), opacity ${FLY_OUT_MS}ms ease`;
+    el.card.style.transform = `translateX(${dir * dist}px) rotate(${dir * 14}deg)`;
+    el.card.style.opacity = '0';
+    window.setTimeout(() => {
+      cardAnimating = false;
+      answer(choice);
+    }, FLY_OUT_MS);
+  }
+
+  function bindFeedbackSwipeHint() {
+    const hint = el.feedbackSwipeHint;
+    if (!hint) return;
+
+    let startX = 0;
+    let startY = 0;
+    let active = false;
+
+    function onDown(clientX, clientY) {
+      startX = clientX;
+      startY = clientY;
+      active = true;
+    }
+
+    function onUp(clientX, clientY) {
+      if (!active) return;
+      active = false;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      if (
+        Math.abs(dx) > FEEDBACK_HINT_SWIPE &&
+        Math.abs(dx) > Math.abs(dy) * 0.7
+      ) {
+        goNextFromFeedback();
+      }
+    }
+
+    hint.addEventListener(
+      'touchstart',
+      (e) => {
+        if (e.touches.length !== 1) return;
+        onDown(e.touches[0].clientX, e.touches[0].clientY);
+      },
+      { passive: true }
+    );
+
+    hint.addEventListener(
+      'touchend',
+      (e) => {
+        if (e.changedTouches.length !== 1) return;
+        onUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      },
+      { passive: true }
+    );
+
+    let mouseOnHint = false;
+    hint.addEventListener('mousedown', (e) => {
+      mouseOnHint = true;
+      onDown(e.clientX, e.clientY);
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (!mouseOnHint) return;
+      mouseOnHint = false;
+      onUp(e.clientX, e.clientY);
+    });
+  }
+
   function bindSwipe() {
     const card = el.card;
     if (!card) return;
 
     function onDown(clientX, clientY) {
+      if (cardAnimating) return;
       touchStartX = clientX;
       touchStartY = clientY;
       cardOffsetX = 0;
     }
 
     function onMove(clientX) {
+      if (cardAnimating) return;
       cardOffsetX = clientX - touchStartX;
       const rot = cardOffsetX * 0.05;
       card.style.transform = `translateX(${cardOffsetX}px) rotate(${rot}deg)`;
@@ -220,6 +298,7 @@
     }
 
     function onUp(clientX) {
+      if (cardAnimating) return;
       const dx = clientX - touchStartX;
       if (dx < -SWIPE_THRESHOLD) {
         answer('myth');
@@ -271,28 +350,27 @@
     });
   }
 
-  el.consent?.addEventListener('change', () => {
-    if (el.btnStart) el.btnStart.disabled = !el.consent.checked;
-  });
+  function scrollToQuizContent() {
+    document.getElementById('page-content-inner')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
 
   el.btnStart?.addEventListener('click', () => {
-    if (!el.consent?.checked) return;
     index = 0;
     score = 0;
     showScreen(el.quiz);
     renderCard();
+    scrollToQuizContent();
   });
 
-  el.btnMyth?.addEventListener('click', () => answer('myth'));
-  el.btnTruth?.addEventListener('click', () => answer('truth'));
+  el.btnMyth?.addEventListener('click', () => flyCardOutAndAnswer('myth'));
+  el.btnTruth?.addEventListener('click', () => flyCardOutAndAnswer('truth'));
   el.btnNext?.addEventListener('click', goNextFromFeedback);
 
   document.getElementById('btn-to-form')?.addEventListener('click', () => {
     showScreen(el.form);
-  });
-
-  document.getElementById('btn-learn-more')?.addEventListener('click', () => {
-    window.location.href = 'https://kartazhizni.ru/ba-u-detey/';
   });
 
   el.formSkip?.addEventListener('click', () => {
@@ -301,13 +379,15 @@
 
   el.formEl?.addEventListener('submit', (e) => {
     e.preventDefault();
+    const consent = document.getElementById('consent-form-data');
+    if (consent && !consent.checked) return;
     alert('Прототип: данные формы не отправляются. Подключите бэкенд или CRM.');
+    el.formEl?.reset();
     showScreen(el.intro);
     index = 0;
     score = 0;
   });
 
   bindSwipe();
-
-  if (el.btnStart) el.btnStart.disabled = !el.consent?.checked;
+  bindFeedbackSwipeHint();
 })();
