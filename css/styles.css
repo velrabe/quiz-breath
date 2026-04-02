@@ -873,6 +873,14 @@ h1 {
 .consent--form {
   margin-top: 1.25rem;
   margin-bottom: 0.25rem;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.consent--form span {
+  flex: 1 1 auto;
 }
 
 .actions {
@@ -1214,8 +1222,8 @@ button:disabled {
 .result-partner {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1239,6 +1247,10 @@ button:disabled {
   width: auto;
   max-width: var(--partner-logo-max-w);
   display: block;
+}
+
+.result-partner__icon {
+  color: var(--text);
 }
 
 .result-partner__label {
