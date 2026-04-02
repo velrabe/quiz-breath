@@ -14,6 +14,9 @@
 }
 
 :root {
+  /* <768px: 1rem = 14px */
+  --rem-base: 14px;
+
   --bg: #f4f4f2;
   --surface: #fff;
   --text: #1a1a1a;
@@ -25,33 +28,58 @@
   --accent-hover: #e67312;
   --myth: #dc2626;
   --truth: #16a34a;
-  --radius: 12px;
+
+  --radius: 0.75rem;
+  --radius-sm: 0.25rem;
+  --radius-ui: 0.5rem;
+  --shadow-quiz-screen: 0 0.75rem 2.5rem rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 0.375rem 1.5rem rgba(0, 0, 0, 0.1);
+  --paper-tile-size: 6.25rem;
+
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Toony Loons', var(--font);
   /**
-   * Контейнеры: < 1378 — 90%; ≥ 1378 — 1400px (десктоп); ≥ 1920 — 1900px (4K+).
-   * < 768 — мобильная вёрстка; до 1378 остаётся 90% (в т.ч. < 960).
+   * Базовая ширина контентной колонки (--maxw, --banner-maxw):
+   * <768px — 90%; ≥768px — 80%.
    */
   --maxw: 90%;
   --banner-maxw: 90%;
+  --hero-block-h: 100vh;
+  --hero-block-h-fixed: 100dvh;
+  --page-inner-pad-y: 5rem;
+  --panda-mobile-max-w: min(92vw, 26.25rem);
+  /** ≥768px: фиксированная ширина, высота по пропорции PNG */
+  --panda-width-desktop: 32.375rem;
+  --quiz-card-min-h: 11.25rem;
+  --partner-logo-h: 2rem;
+  --partner-logo-max-w: min(12.5rem, 45vw);
+}
+
+@media (min-width: 768px) {
+  :root {
+    /** планшет/десктоп: 1rem = 13px */
+    --rem-base: 13px;
+    --maxw: 80%;
+    --banner-maxw: 80%;
+  }
 }
 
 @media (min-width: 1378px) {
   :root {
-    --maxw: min(1400px, 90vw);
-    --banner-maxw: min(1400px, 90vw);
+    /** широкая колонка: 1rem = 14px */
+    --rem-base: 14px;
   }
 }
 
 @media (min-width: 1920px) {
   :root {
-    --maxw: 1900px;
-    --banner-maxw: 1900px;
+    /** 1rem = 16px */
+    --rem-base: 16px;
   }
 }
 
 html {
-  font-size: 16px;
+  font-size: var(--rem-base);
   scroll-behavior: smooth;
   background: transparent;
 }
@@ -120,12 +148,14 @@ a:hover {
   bottom: 0;
   z-index: 1;
   line-height: 0;
+  transform-origin: right bottom;
+  opacity: 1;
 }
 
 .page-bg__panda {
   width: auto;
-  height: 80vh;
-  max-height: 80vh;
+  height: var(--hero-block-h);
+  max-height: var(--hero-block-h-fixed);
   max-width: 50vw;
   object-fit: contain;
   object-position: right bottom;
@@ -134,24 +164,26 @@ a:hover {
   user-select: none;
 }
 
+@media (min-width: 768px) {
+  .page-bg__panda {
+    width: var(--panda-width-desktop);
+    max-width: none;
+    height: auto;
+    max-height: none;
+  }
+}
+
 /* ——— Hero ——— */
 .hero {
   position: relative;
   z-index: 1;
   width: 100%;
   overflow: hidden;
-  height: 80vh;
-  height: 80dvh;
+  height: var(--hero-block-h);
+  height: var(--hero-block-h-fixed);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-}
-
-@media (min-aspect-ratio: 2/3) {
-  .hero {
-    height: 100vh;
-    height: 100dvh;
-  }
 }
 
 .hero__inner {
@@ -183,7 +215,7 @@ a:hover {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: 4rem;
   min-width: 0;
 }
 
@@ -263,11 +295,11 @@ a:hover {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 0.25rem;
+  gap: 1.5rem;
+  padding: 0.5rem 2rem 0.5rem 0.5rem;
   border-radius: 0.5rem;
   background: #fff;
-  border: 1px solid var(--hero-title);
+  border: none;
   position: relative;
   z-index: 1;
   min-width: 0;
@@ -276,40 +308,33 @@ a:hover {
 .hero-promo__icon {
   flex-shrink: 0;
   display: block;
-  width: 48px;
-  height: 48px;
+  height: 5.125rem;
+  width: auto;
   max-width: 100%;
   object-fit: contain;
 }
 
 .hero-promo__text {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0;
+  margin: 0;
   min-width: 0;
   font-family: var(--font-display);
   font-weight: normal;
-  font-size: 1.5rem;
-  line-height: 1.15;
-  color: var(--hero-title);
+  font-size: 1.75rem;
+  line-height: 1.2;
   letter-spacing: 0.02em;
 }
 
-.hero-promo__line {
-  display: block;
-  white-space: nowrap;
+.hero-promo__muted {
+  color: var(--hero-subtitle);
 }
 
-@media (max-width: 420px) {
-  .hero-promo__line {
-    white-space: normal;
-  }
+.hero-promo__brand {
+  color: var(--hero-title);
 }
 
 .hero__title {
   font-family: var(--font-display);
-  font-size: clamp(6rem, 18vw, 7.25rem);
+  font-size: 8rem;
   font-weight: normal;
   line-height: 0.75;
   margin: 0;
@@ -331,15 +356,25 @@ a:hover {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font: inherit;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  gap: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: normal;
+  letter-spacing: 0.02em;
   text-decoration: none;
-  border-radius: 8px;
-  padding: 0.85rem 1.75rem;
+  border-radius: 1.5rem;
+  padding: 1.625rem 3.5rem;
   background: var(--accent);
   color: #fff;
   border: 1px solid var(--accent);
+}
+
+.hero-cta__arrow {
+  flex-shrink: 0;
+  display: block;
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
 }
 
 .hero-cta:hover {
@@ -372,7 +407,13 @@ a:hover {
   }
 
   .hero__title {
-    font-size: clamp(2.75rem, 14vw, 4.5rem);
+    font-size: clamp(2.75rem, 12vw, 8rem);
+  }
+
+  .hero-cta {
+    font-size: clamp(1.35rem, 5vw, 2.5rem);
+    padding: 1.25rem 2rem;
+    gap: 1rem;
   }
 
   .hero__subtitle {
@@ -382,10 +423,11 @@ a:hover {
   .page-bg__panda-slot {
     left: 50%;
     right: auto;
+    transform-origin: center bottom;
   }
 
   .page-bg__panda {
-    width: min(92vw, 420px);
+    width: var(--panda-mobile-max-w);
     max-width: 100%;
     height: auto;
     max-height: 55vh;
@@ -415,7 +457,7 @@ a:hover {
   width: 100%;
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 80px 0;
+  padding: var(--page-inner-pad-y) 0;
   box-sizing: border-box;
 }
 
@@ -462,7 +504,7 @@ a:hover {
 }
 
 .quiz-stage .screen {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-quiz-screen);
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -706,7 +748,7 @@ button,
 .btn {
   font: inherit;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--radius-ui);
   padding: 0.65rem 1.2rem;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -782,12 +824,12 @@ button:disabled {
 #feedback-card.quiz-card {
   background-color: #fff;
   background-image: url('../img/quiz/paper.png');
-  background-size: 100px 100px;
+  background-size: var(--paper-tile-size) var(--paper-tile-size);
   background-repeat: repeat;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius);
   padding: 1.5rem;
-  min-height: 180px;
+  min-height: var(--quiz-card-min-h);
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -795,7 +837,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   transition: opacity 0.15s ease;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 #quiz-card {
@@ -928,7 +970,7 @@ button:disabled {
   gap: 0.4rem;
   padding: 0.4rem 0.65rem;
   background: #e8e8e6;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
   color: var(--text);
   font-size: 0.875rem;
@@ -984,9 +1026,9 @@ button:disabled {
 
 .result-partner__logo {
   flex-shrink: 0;
-  height: 32px;
+  height: var(--partner-logo-h);
   width: auto;
-  max-width: min(200px, 45vw);
+  max-width: var(--partner-logo-max-w);
   display: block;
 }
 
@@ -1018,7 +1060,7 @@ button:disabled {
   max-width: 24rem;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-ui);
   font: inherit;
   margin-bottom: 1rem;
 }

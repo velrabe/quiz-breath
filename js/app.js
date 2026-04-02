@@ -351,10 +351,17 @@
   }
 
   function scrollToQuizContent() {
-    document.getElementById('page-content-inner')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
+    var el = document.getElementById('page-content-inner');
+    if (!el) return;
+    var y =
+      el.getBoundingClientRect().top +
+      (window.scrollY || window.pageYOffset || 0);
+    y = Math.max(0, Math.round(y));
+    var html = document.documentElement;
+    var prev = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo({ left: 0, top: y, behavior: 'auto' });
+    html.style.scrollBehavior = prev;
   }
 
   el.btnStart?.addEventListener('click', () => {
