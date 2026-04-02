@@ -55,7 +55,7 @@
               Развеиваем мифы о бронхиальной астме в игровом формате.
             </p>
             <div class="hero__cta-row">
-              <a class="hero-cta" href="#page-content-inner">
+              <a class="hero-cta" href="#page-content" data-scroll-target="#page-content">
                 Пройти квиз
                 <img
                   class="hero-cta__arrow"
@@ -87,7 +87,7 @@
       </div>
     </header>
 
-    <div class="page-content">
+    <div class="page-content" id="page-content">
       <div class="page-content__inner" id="page-content-inner">
     <main class="page-main">
       <div id="quiz-stage" class="quiz-stage">
@@ -131,136 +131,124 @@
         </div>
         <div class="quiz-card-area">
           <div class="card-wrap">
-            <div id="quiz-card">
-              <p id="card-question-text"></p>
-            </div>
-          </div>
-        </div>
-        <div class="quiz-bottom">
-          <div class="quiz-buttons quiz-buttons--main">
-            <button type="button" class="btn-myth" id="btn-myth">Миф</button>
-            <button type="button" class="btn-truth" id="btn-truth">Правда</button>
-          </div>
-          <p class="swipe-hint">Смахните карточку или нажмите кнопку</p>
-        </div>
-      </section>
-
-      <!-- Пояснение: та же сетка, что у screen-quiz -->
-      <section id="screen-feedback" class="screen screen--quiz" hidden>
-        <div class="quiz-top">
-          <p class="feedback-head" id="feedback-title"></p>
-        </div>
-        <div class="quiz-card-area">
-          <div class="card-wrap">
-            <div id="feedback-card" class="quiz-card quiz-card--feedback">
-              <p id="feedback-explanation"></p>
-              <div class="sources-block">
-                <p class="sources-heading">Источники и ссылки</p>
-                <div id="feedback-sources" class="sources-tags"></div>
+            <div class="quiz-card-stack">
+              <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
+                <div id="feedback-card" class="quiz-card quiz-card--feedback">
+                  <p class="feedback-head" id="feedback-title"></p>
+                  <p id="feedback-explanation"></p>
+                  <div class="sources-block">
+                    <p class="sources-heading">Источники и ссылки</p>
+                    <div id="feedback-sources" class="sources-tags"></div>
+                  </div>
+                </div>
+              </div>
+              <div id="quiz-card">
+                <div class="card-question-media-frame">
+                  <img
+                    id="card-question-media"
+                    src="img/banners/banner.png"
+                    width="1600"
+                    height="900"
+                    alt=""
+                    decoding="async"
+                  />
+                </div>
+                <p id="card-question-text"></p>
               </div>
             </div>
           </div>
         </div>
         <div class="quiz-bottom">
-          <div class="quiz-buttons quiz-buttons--main">
-            <button type="button" class="btn-primary" id="btn-feedback-next">
-              Далее
-            </button>
+          <div class="quiz-buttons quiz-buttons--main quiz-actions-stack">
+            <div class="quiz-actions-row" id="quiz-answer-actions">
+              <button type="button" class="btn-myth" id="btn-myth">Миф</button>
+              <button type="button" class="btn-truth" id="btn-truth">Правда</button>
+            </div>
+            <div class="quiz-actions-row quiz-actions-row--next" id="quiz-next-actions" aria-hidden="true">
+              <button type="button" class="btn-primary" id="btn-feedback-next">
+                Далее
+              </button>
+            </div>
           </div>
-          <p
-            id="feedback-swipe-hint"
-            class="swipe-hint swipe-hint--feedback-next"
-          >
-            Смахните влево или вправо — следующий вопрос
-          </p>
+          <p class="swipe-hint" id="quiz-swipe-hint">Смахните карточку или нажмите кнопку</p>
         </div>
       </section>
 
       <!-- Результат -->
-      <section id="screen-result" class="screen" hidden>
-        <h1>Готово</h1>
-        <p id="result-score" class="subtitle"></p>
-        <div id="result-tier-message"></div>
-        <p class="subtitle" style="margin-top: 1rem">
-          Участники розыгрыша определяются на стороне организатора. Заполните
-          форму ниже, если хотите участвовать, или перейдите к материалам на
-          тему.
-        </p>
-        <div class="result-actions">
-          <button type="button" class="btn-primary" id="btn-to-form">
-            Участвовать в розыгрыше
-          </button>
-          <a
-            class="result-partner"
-            id="link-learn-more"
-            href="https://kartazhizni.ru/ba-u-detey/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <img
-              class="result-partner__logo"
-              src="img/partners/karta-zhizni.svg"
-              width="160"
-              height="32"
-              alt="Карта жизни"
-            />
-            <span class="result-partner__label">Узнать подробнее по теме</span>
-          </a>
+      <section id="screen-result" class="screen screen--quiz-layout" hidden>
+        <div class="quiz-top quiz-top--result">
+          <h1>Готово</h1>
         </div>
-      </section>
+        <div class="quiz-card-area quiz-card-area--result">
+          <div class="screen-result__body">
+            <p id="result-score" class="subtitle"></p>
+            <div id="result-tier-message"></div>
+            <p class="subtitle screen-result__lead">
+              Участники розыгрыша определяются на стороне организатора. Заполните
+              форму ниже, если хотите участвовать, или перейдите к материалам на
+              тему.
+            </p>
+            <form id="lead-form" class="lead-form lead-form--result">
+              <label for="lead-name">Имя</label>
+              <input id="lead-name" name="name" type="text" autocomplete="name" />
 
-      <!-- Форма лида -->
-      <section id="screen-form" class="screen" hidden>
-        <h1>Контакты</h1>
-        <p class="lead-note">
-          После подключения бэкенда здесь будет отправка заявки. Сейчас —
-          только демонстрация полей.
-        </p>
-        <form id="lead-form" class="lead-form">
-          <label for="lead-name">Имя</label>
-          <input id="lead-name" name="name" type="text" autocomplete="name" />
+              <label for="lead-email">Эл. почта</label>
+              <input
+                id="lead-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+              />
 
-          <label for="lead-email">Эл. почта</label>
-          <input
-            id="lead-email"
-            name="email"
-            type="email"
-            autocomplete="email"
-            required
-          />
+              <label for="lead-phone">Телефон</label>
+              <input
+                id="lead-phone"
+                name="phone"
+                type="tel"
+                autocomplete="tel"
+              />
 
-          <label for="lead-phone">Телефон</label>
-          <input
-            id="lead-phone"
-            name="phone"
-            type="tel"
-            autocomplete="tel"
-          />
-
-          <label class="consent consent--form">
-            <input type="checkbox" id="consent-form-data" required />
-            <span
-              >Согласен(на) с
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="form-rules-link"
-                >правилами участия в розыгрыше</a
-              >
-              и обработкой персональных данных при отправке этой формы.</span
-            >
-          </label>
-
-          <div class="actions">
-            <button type="submit" class="btn-primary" id="btn-lead-submit">
-              Отправить
-            </button>
-            <button type="button" class="btn" id="btn-skip-form">
-              Пропустить, перейти на сайт
-            </button>
+              <label class="consent consent--form">
+                <input type="checkbox" id="consent-form-data" required />
+                <span
+                  >Согласен(на) с
+                  <a
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="form-rules-link"
+                    >правилами участия в розыгрыше</a
+                  >
+                  и обработкой персональных данных при отправке этой формы.</span
+                >
+              </label>
+            </form>
           </div>
-        </form>
+        </div>
+        <div class="quiz-bottom quiz-bottom--result">
+          <div class="result-actions">
+            <button type="submit" class="btn-primary" id="btn-to-form" form="lead-form">
+              Участвовать в розыгрыше
+            </button>
+            <a
+              class="result-partner"
+              id="link-learn-more"
+              href="https://kartazhizni.ru/ba-u-detey/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                class="result-partner__logo"
+                src="img/partners/karta-zhizni-logo.svg"
+                width="149"
+                height="58"
+                alt="Карта жизни"
+              />
+              <span class="result-partner__label">Узнать подробнее по теме</span>
+            </a>
+          </div>
+        </div>
       </section>
 
       </div>
@@ -271,10 +259,10 @@
       <div class="banner-ad banner-ad--ratio">
         <img
           class="banner-ad__img"
-          src="img/banners/footer-ad-placeholder.svg"
+          src="img/banners/banner.png"
           alt=""
-          width="1200"
-          height="600"
+          width="1920"
+          height="960"
           decoding="async"
         />
       </div>
