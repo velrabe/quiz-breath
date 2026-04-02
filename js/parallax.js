@@ -8,6 +8,11 @@
   var CONFIG = {
     skyYPerScroll: -0.1,
     grassYPerScroll: 2,
+    background: {
+      baseScale: 1.1,
+      pointerEase: 0.08,
+      pointerSettleThreshold: 0.0008,
+    },
     hero: {
       maxTranslateRatio: 0.78,
       /** Сколько «вычитается» из vh на 1px scroll. */
@@ -22,10 +27,12 @@
       easePow: 1.75,
     },
     panda: {
+      baseScale: 1.1,
       moveRangeVhFrac: 0.32,
       easePow: 2.45,
       maxTyVhMul: 1.72,
       scaleAmp: 1.14,
+      pointerShiftFrac: 0.05,
       fadeStartMoveRangeMul: 1,
       fadeSpanVhFrac: 0.36,
     },
@@ -41,11 +48,15 @@
   var state = {
     heroHeight: null,
     heroInnerY: null,
-    skyY: null,
-    grassY: null,
+    skyTransform: '',
+    grassTransform: '',
     grassOpacity: '',
     pandaTransform: '',
     pandaOpacity: '',
+    pointerTargetX: 0,
+    pointerTargetY: 0,
+    pointerCurrentX: 0,
+    pointerCurrentY: 0,
   };
 
   var sky = document.querySelector('.page-bg__sky');
@@ -139,19 +150,91 @@
     heroInner.style.transform = 'translate3d(0,' + translateY + 'px,0)';
   }
 
+  function updatePointerMotion() {
+    var cfg = CONFIG.background;
+    var dx = state.pointerTargetX - state.pointerCurrentX;
+    var dy = state.pointerTargetY - state.pointerCurrentY;
+    var moving =
+      Math.abs(dx) > cfg.pointerSettleThreshold ||
+      Math.abs(dy) > cfg.pointerSettleThreshold;
+
+    if (!moving) {
+      state.pointerCurrentX = state.pointerTargetX;
+      state.pointerCurrentY = state.pointerTargetY;
+      return false;
+    }
+
+    state.pointerCurrentX += dx * cfg.pointerEase;
+    state.pointerCurrentY += dy * cfg.pointerEase;
+    return true;
+  }
+
+  function getBackgroundPointerShift(node, pointerValue, axis) {
+    if (!node) return 0;
+    var size = getNodeBaseSize(node, axis);
+    var halfOverflow = getHalfOverflow(size, CONFIG.background.baseScale);
+    return -pointerValue * halfOverflow;
+  }
+
+  function getNodeBaseSize(node, axis) {
+    if (!node) return 0;
+    var size =
+      axis === 'x'
+        ? node.offsetWidth || node.clientWidth
+        : node.offsetHeight || node.clientHeight;
+
+    if (size) return size;
+
+    var rect = node.getBoundingClientRect();
+    return axis === 'x' ? rect.width : rect.height;
+  }
+
+  function getHalfOverflow(size, scale) {
+    if (!size || !scale || scale <= 1) return 0;
+    return size * ((scale - 1) * 0.5);
+  }
+
+  function getPointerShiftWithinScale(node, pointerValue, axis, scale, frac) {
+    if (!node) return 0;
+    var size = getNodeBaseSize(node, axis);
+    var halfOverflow = getHalfOverflow(size, scale);
+    return -pointerValue * Math.min(halfOverflow, size * frac);
+  }
+
   function updateSkyGrass(y, heroVisible) {
     var skyY = Math.round(y * CONFIG.skyYPerScroll);
     var grassY = Math.round(y * CONFIG.grassYPerScroll);
     var grassOpacityValue = heroVisible ? '1' : '0';
+    var scaleValue = CONFIG.background.baseScale.toFixed(3);
+    var skyShiftX = getBackgroundPointerShift(sky, state.pointerCurrentX, 'x');
+    var skyShiftY = getBackgroundPointerShift(sky, state.pointerCurrentY, 'y');
+    var grassShiftX = getBackgroundPointerShift(grass, state.pointerCurrentX, 'x');
+    var grassShiftY = getBackgroundPointerShift(grass, state.pointerCurrentY, 'y');
+    var skyTransform =
+      'translate3d(' +
+      skyShiftX.toFixed(2) +
+      'px,' +
+      (skyY + skyShiftY).toFixed(2) +
+      'px,0) scale(' +
+      scaleValue +
+      ')';
+    var grassTransform =
+      'translate3d(' +
+      grassShiftX.toFixed(2) +
+      'px,' +
+      (grassY + grassShiftY).toFixed(2) +
+      'px,0) scale(' +
+      scaleValue +
+      ')';
 
-    if (sky && state.skyY !== skyY) {
-      state.skyY = skyY;
-      sky.style.transform = 'translate3d(0,' + skyY + 'px,0)';
+    if (sky && state.skyTransform !== skyTransform) {
+      state.skyTransform = skyTransform;
+      sky.style.transform = skyTransform;
     }
 
-    if (grass && state.grassY !== grassY) {
-      state.grassY = grassY;
-      grass.style.transform = 'translate3d(0,' + grassY + 'px,0)';
+    if (grass && state.grassTransform !== grassTransform) {
+      state.grassTransform = grassTransform;
+      grass.style.transform = grassTransform;
     }
 
     if (grass && state.grassOpacity !== grassOpacityValue) {
@@ -174,8 +257,23 @@
 
     var maxTy = hRef * cfg.maxTyVhMul;
     var scaleGrow = cfg.scaleAmp * e;
-    var scale = 1 + scaleGrow;
-    var ty = Math.round(e * maxTy);
+    var scale = cfg.baseScale + scaleGrow;
+    var pointerX = getPointerShiftWithinScale(
+      pandaSlot,
+      state.pointerCurrentX,
+      'x',
+      scale,
+      cfg.pointerShiftFrac
+    );
+    var pointerY = getPointerShiftWithinScale(
+      pandaSlot,
+      state.pointerCurrentY,
+      'y',
+      scale,
+      cfg.pointerShiftFrac
+    );
+    var tx = Math.round(pointerX);
+    var ty = Math.round(e * maxTy + pointerY);
 
     var fadeStart = moveRange * cfg.fadeStartMoveRangeMul;
     var fadeSpan = hRef * cfg.fadeSpanVhFrac;
@@ -186,8 +284,8 @@
     }
 
     var translate = isMobile
-      ? 'translate3d(-50%, ' + ty + 'px, 0) '
-      : 'translate3d(0,' + ty + 'px, 0) ';
+      ? 'translate3d(calc(-50% + ' + tx + 'px), ' + ty + 'px, 0) '
+      : 'translate3d(' + tx + 'px,' + ty + 'px, 0) ';
     var transform = translate + 'scale(' + scale.toFixed(4) + ')';
     var opacityValue = heroVisible ? String(opacity) : '0';
 
@@ -205,6 +303,7 @@
   function frame() {
     var vh = window.innerHeight || 1;
     var y = window.scrollY || window.pageYOffset;
+    var pointerMoving = updatePointerMotion();
     var heroExitY = computeHeroExitScrollY(vh, CONFIG.hero);
     var heroVisible = y < heroExitY;
     var effectY = heroVisible ? y : heroExitY;
@@ -221,17 +320,19 @@
     if (heroEl) updateHeroInner(heroProgress, vh, CONFIG.hero);
     updateSkyGrass(effectY, heroVisible);
     updatePanda(effectY, vh, CONFIG.panda, heroVisible);
+    return pointerMoving;
   }
 
-  var ticking = false;
-  function onScroll() {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(function () {
-        ticking = false;
-        frame();
-      });
-    }
+  var frameScheduled = false;
+  function runFrame() {
+    frameScheduled = false;
+    if (frame()) scheduleFrame();
+  }
+
+  function scheduleFrame() {
+    if (frameScheduled) return;
+    frameScheduled = true;
+    requestAnimationFrame(runFrame);
   }
 
   if (heroInner) heroInner.style.willChange = 'transform';
@@ -241,11 +342,53 @@
   if (pandaSlot) pandaSlot.style.willChange = 'transform, opacity';
 
   if (mqlMobile) {
-    if (mqlMobile.addEventListener) mqlMobile.addEventListener('change', frame);
-    else if (mqlMobile.addListener) mqlMobile.addListener(frame);
+    if (mqlMobile.addEventListener) {
+      mqlMobile.addEventListener('change', function () {
+        state.pointerTargetX = 0;
+        state.pointerTargetY = 0;
+        scheduleFrame();
+      });
+    } else if (mqlMobile.addListener) {
+      mqlMobile.addListener(function () {
+        state.pointerTargetX = 0;
+        state.pointerTargetY = 0;
+        scheduleFrame();
+      });
+    }
   }
 
-  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', scheduleFrame, { passive: true });
+  window.addEventListener(
+    'pointermove',
+    function (e) {
+      if (!e || e.pointerType === 'touch') return;
+      if (mqlMobile && mqlMobile.matches) return;
+      var vw = window.innerWidth || 1;
+      var vh = window.innerHeight || 1;
+      state.pointerTargetX = clamp01(e.clientX / vw) * 2 - 1;
+      state.pointerTargetY = clamp01(e.clientY / vh) * 2 - 1;
+      scheduleFrame();
+    },
+    { passive: true }
+  );
+  window.addEventListener(
+    'pointerleave',
+    function () {
+      state.pointerTargetX = 0;
+      state.pointerTargetY = 0;
+      scheduleFrame();
+    },
+    { passive: true }
+  );
+  window.addEventListener(
+    'blur',
+    function () {
+      state.pointerTargetX = 0;
+      state.pointerTargetY = 0;
+      scheduleFrame();
+    },
+    { passive: true }
+  );
   window.addEventListener('wheel', cancelTargetScrollFromUserInput, { passive: true });
   window.addEventListener('touchstart', cancelTargetScrollFromUserInput, {
     passive: true,
@@ -254,8 +397,8 @@
     passive: true,
   });
   window.addEventListener('keydown', cancelTargetScrollFromUserInput);
-  window.addEventListener('resize', frame, { passive: true });
-  frame();
+  window.addEventListener('resize', scheduleFrame, { passive: true });
+  scheduleFrame();
 
   function getScrollY() {
     return window.scrollY || window.pageYOffset || 0;
@@ -334,7 +477,7 @@
       var deltaAbs = Math.abs(delta);
       if (deltaAbs <= scrollCfg.settleTolerancePx) {
         scrollAnimationId = 0;
-        frame();
+        scheduleFrame();
         return;
       }
 
@@ -345,13 +488,13 @@
         Math.abs(prevDelta) < 6
       ) {
         scrollAnimationId = 0;
-        frame();
+        scheduleFrame();
         return;
       }
 
       if (frameCount >= scrollCfg.maxFrames) {
         scrollAnimationId = 0;
-        frame();
+        scheduleFrame();
         return;
       }
 
@@ -370,7 +513,7 @@
 
       scrollToDocumentY(nextY);
       prevDelta = delta;
-      frame();
+      scheduleFrame();
       scrollAnimationId = requestAnimationFrame(step);
     }
     scrollAnimationId = requestAnimationFrame(step);

@@ -132,6 +132,8 @@ a:hover {
   flex-direction: column;
   align-items: stretch;
   line-height: 0;
+  transform-origin: center center;
+  transform: scale(1.1);
 }
 
 .page-bg__sky-img {
@@ -153,6 +155,8 @@ a:hover {
   display: block;
   object-fit: cover;
   object-position: center bottom;
+  transform-origin: center center;
+  transform: scale(1.1);
 }
 
 .page-bg__panda-slot {
@@ -161,7 +165,8 @@ a:hover {
   bottom: 0;
   z-index: 1;
   line-height: 0;
-  transform-origin: right bottom;
+  transform-origin: center center;
+  transform: scale(1.1);
   opacity: 1;
 }
 
@@ -496,7 +501,7 @@ a:hover {
   .page-bg__panda-slot {
     left: 50%;
     right: auto;
-    transform-origin: center bottom;
+    transform-origin: center center;
   }
 
   .page-bg__panda {
