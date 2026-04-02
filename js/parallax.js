@@ -33,12 +33,21 @@
       fadeSpanVhFrac: 0.36,
     },
   };
+  var state = {
+    heroHeight: null,
+    heroInnerY: null,
+    skyY: null,
+    grassY: null,
+    pandaTransform: '',
+    pandaOpacity: '',
+  };
 
   var sky = document.querySelector('.page-bg__sky');
   var grass = document.querySelector('.page-bg__grass');
   var pandaSlot = document.querySelector('.page-bg__panda-slot');
   var heroEl = document.querySelector('.hero');
   var heroInner = document.querySelector('.hero__inner');
+  var rootStyle = document.documentElement.style;
   var reduce =
     window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var mqlMobile =
@@ -69,23 +78,38 @@
    * scrollTo при непрерывном скролле дрался с трекпадом/инерцией и сдвигал scrollY
    * после расчёта панды → дрожание.
    */
-  function updateHeroHeight(hero, y, vh, cfg) {
-    var heroH = computeHeroH(y, vh, cfg);
-    hero.style.height = heroH + 'px';
-    document.documentElement.style.setProperty('--hero-block-h', heroH + 'px');
-    document.documentElement.style.setProperty('--hero-block-h-fixed', heroH + 'px');
+  function updateHeroHeight(heroH) {
+    if (state.heroHeight === heroH) return;
+    state.heroHeight = heroH;
+    var heroHeightValue = heroH + 'px';
+    if (heroEl) heroEl.style.height = heroHeightValue;
+    rootStyle.setProperty('--hero-block-h', heroHeightValue);
+    rootStyle.setProperty('--hero-block-h-fixed', heroHeightValue);
   }
 
-  function updateHeroInner(y, hero, cfg) {
+  function updateHeroInner(y, heroH, cfg) {
     if (!heroInner) return;
-    var cap = hero.offsetHeight * cfg.maxTranslateRatio;
+    var cap = heroH * cfg.maxTranslateRatio;
     var t = -Math.min(y * cfg.innerSpeed, cap);
-    heroInner.style.transform = 'translate3d(0,' + Math.round(t) + 'px,0)';
+    var translateY = Math.round(t);
+    if (state.heroInnerY === translateY) return;
+    state.heroInnerY = translateY;
+    heroInner.style.transform = 'translate3d(0,' + translateY + 'px,0)';
   }
 
   function updateSkyGrass(y) {
-    if (sky) sky.style.transform = 'translate3d(0,' + Math.round(y * CONFIG.skyYPerScroll) + 'px,0)';
-    if (grass) grass.style.transform = 'translate3d(0,' + Math.round(y * CONFIG.grassYPerScroll) + 'px,0)';
+    var skyY = Math.round(y * CONFIG.skyYPerScroll);
+    var grassY = Math.round(y * CONFIG.grassYPerScroll);
+
+    if (sky && state.skyY !== skyY) {
+      state.skyY = skyY;
+      sky.style.transform = 'translate3d(0,' + skyY + 'px,0)';
+    }
+
+    if (grass && state.grassY !== grassY) {
+      state.grassY = grassY;
+      grass.style.transform = 'translate3d(0,' + grassY + 'px,0)';
+    }
   }
 
   /**
@@ -120,20 +144,31 @@
     var translate = isMobile
       ? 'translate3d(calc(-50% + ' + tx + 'px), ' + ty + 'px, 0) '
       : 'translate3d(' + tx + 'px,' + ty + 'px, 0) ';
-    pandaSlot.style.transform = translate + 'scale(' + scale.toFixed(4) + ')';
-    pandaSlot.style.opacity = String(opacity);
+    var transform = translate + 'scale(' + scale.toFixed(4) + ')';
+    var opacityValue = String(opacity);
+
+    if (state.pandaTransform !== transform) {
+      state.pandaTransform = transform;
+      pandaSlot.style.transform = transform;
+    }
+
+    if (state.pandaOpacity !== opacityValue) {
+      state.pandaOpacity = opacityValue;
+      pandaSlot.style.opacity = opacityValue;
+    }
   }
 
   function frame() {
     var vh = window.innerHeight || 1;
     var y = window.scrollY || window.pageYOffset;
+    var heroH = 0;
 
     if (heroEl) {
-      updateHeroHeight(heroEl, y, vh, CONFIG.hero);
+      heroH = computeHeroH(y, vh, CONFIG.hero);
+      updateHeroHeight(heroH);
     }
 
-    y = window.scrollY || window.pageYOffset;
-    if (heroEl) updateHeroInner(y, heroEl, CONFIG.hero);
+    if (heroEl) updateHeroInner(y, heroH, CONFIG.hero);
     updateSkyGrass(y);
     updatePanda(y, vh, CONFIG.panda);
   }
@@ -177,19 +212,47 @@
     html.style.scrollBehavior = prev;
   }
 
+  function resolveTargetTop(target) {
+    var vh = window.innerHeight || 1;
+    var currentY = window.scrollY || window.pageYOffset || 0;
+    var targetTop = target.getBoundingClientRect().top + currentY;
+    if (!heroEl) return Math.max(0, Math.round(targetTop));
+
+    /**
+     * Всё, что лежит под hero, во время скролла едет вверх вместе с её shrink.
+     * Ищем устойчивую точку: targetTop(y) = baseTargetTop + heroHeight(y).
+     */
+    var currentHeroH = computeHeroH(currentY, vh, CONFIG.hero);
+    var baseTargetTop = targetTop - currentHeroH;
+    var resolvedY = targetTop;
+    var i = 0;
+
+    for (; i < 6; i += 1) {
+      resolvedY = Math.max(
+        0,
+        baseTargetTop + computeHeroH(resolvedY, vh, CONFIG.hero)
+      );
+    }
+
+    return Math.round(resolvedY);
+  }
+
+  function scrollTargetIntoViewInstant(target) {
+    if (!target) return;
+    scrollToDocumentYInstant(resolveTargetTop(target));
+    frame();
+  }
+
   var heroCta = document.querySelector('a.hero-cta[href="#page-content-inner"]');
   if (heroCta) {
     heroCta.addEventListener('click', function (e) {
       e.preventDefault();
       var href = heroCta.getAttribute('href') || '';
       var target = href.charAt(0) === '#' ? document.querySelector(href) : null;
-      if (!target) return;
-      var top =
-        target.getBoundingClientRect().top +
-        (window.scrollY || window.pageYOffset || 0);
-      scrollToDocumentYInstant(top);
+      scrollTargetIntoViewInstant(target);
     });
   }
 
+  window.QUIZ_SCROLL_TO_TARGET = scrollTargetIntoViewInstant;
   window.QUIZ_SCROLL_PARALLAX_CONFIG = CONFIG;
 })();

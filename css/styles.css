@@ -82,6 +82,8 @@ html {
   font-size: var(--rem-base);
   scroll-behavior: smooth;
   background: transparent;
+  /* Hero сам меняет высоту во время scroll, anchoring здесь даёт видимый джиттер. */
+  overflow-anchor: none;
 }
 
 body {

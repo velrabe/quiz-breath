@@ -353,6 +353,10 @@
   function scrollToQuizContent() {
     var el = document.getElementById('page-content-inner');
     if (!el) return;
+    if (typeof window.QUIZ_SCROLL_TO_TARGET === 'function') {
+      window.QUIZ_SCROLL_TO_TARGET(el);
+      return;
+    }
     var y =
       el.getBoundingClientRect().top +
       (window.scrollY || window.pageYOffset || 0);
