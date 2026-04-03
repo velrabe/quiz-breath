@@ -7,6 +7,7 @@
 
   const el = {
     stage: document.getElementById('quiz-stage'),
+    pageContent: document.getElementById('page-content'),
     intro: document.getElementById('screen-intro'),
     quiz: document.getElementById('screen-quiz'),
     result: document.getElementById('screen-result'),
@@ -49,6 +50,9 @@
   let stageHeightApplyRaf = 0;
   let stageMode = 'intro';
   let stageAnimateNextSync = false;
+  let stageExpandedByAction = false;
+  const mqlDesktop =
+    window.matchMedia && window.matchMedia('(min-width: 768px)');
 
   function createLinkOutIcon() {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -96,6 +100,10 @@
     return x * x * (3 - 2 * x);
   }
 
+  function clamp01(value) {
+    return Math.min(1, Math.max(0, value));
+  }
+
   function updateCardTextTint(dx) {
     if (!el.cardText) return;
     let t = 0;
@@ -126,6 +134,9 @@
     [el.intro, el.quiz, el.result].forEach((s) => {
       if (s) s.hidden = s !== screen;
     });
+    if (screen === el.intro && !(options && options.preserveExpanded)) {
+      stageExpandedByAction = false;
+    }
     stageMode = getStageModeForScreen(screen);
     queueStageHeightSync(options);
   }
@@ -369,11 +380,16 @@
     }
 
     if (!animate || !currentHeight || Math.abs(currentHeight - targetHeight) < 2) {
+      const nextHeightValue = targetHeight + 'px';
+      if (
+        el.stage.style.height === nextHeightValue &&
+        !el.stage.classList.contains('quiz-stage--animating')
+      ) {
+        return;
+      }
       el.stage.classList.remove('quiz-stage--animating');
       el.stage.style.transition = 'none';
-      el.stage.style.height = targetHeight + 'px';
-      el.stage.offsetHeight;
-      el.stage.style.transition = '';
+      el.stage.style.height = nextHeightValue;
       return;
     }
 
@@ -389,13 +405,68 @@
     });
   }
 
-  function syncStageHeight() {
+  function canUseDesktopStageExpansion() {
+    return Boolean(
+      el.stage &&
+        el.pageContent &&
+        mqlDesktop &&
+        mqlDesktop.matches
+    );
+  }
+
+  function measureVisibleStageNaturalHeight() {
+    if (!el.stage) return 0;
+    const prevHeight = el.stage.style.height;
+    const prevTransition = el.stage.style.transition;
+    const wasAnimating = el.stage.classList.contains('quiz-stage--animating');
+
+    el.stage.classList.remove('quiz-stage--animating');
+    el.stage.style.transition = 'none';
+    el.stage.style.height = 'auto';
+
+    const height = Math.ceil(el.stage.getBoundingClientRect().height);
+
+    el.stage.style.height = prevHeight;
+    el.stage.style.transition = prevTransition;
+    el.stage.classList.toggle('quiz-stage--animating', wasAnimating);
+    return height;
+  }
+
+  function resolveDesktopStageTargetHeight() {
+    if (!canUseDesktopStageExpansion()) return 0;
+    const naturalHeight = measureVisibleStageNaturalHeight();
+    if (!naturalHeight) return 0;
+
+    const vh = window.innerHeight || 1;
+    const expandedHeight = Math.max(naturalHeight, vh);
+
+    if (stageExpandedByAction) return expandedHeight;
+
+    const rect = el.pageContent.getBoundingClientRect();
+    const progress = smoothstep(clamp01((vh - rect.top) / vh));
+    return Math.round(naturalHeight + (expandedHeight - naturalHeight) * progress);
+  }
+
+  function syncStageHeight(options) {
     if (!el.stage) return;
-    stageAnimateNextSync = false;
+    const animate = Boolean(options && options.animate);
     if (stageHeightApplyRaf) {
       cancelAnimationFrame(stageHeightApplyRaf);
       stageHeightApplyRaf = 0;
     }
+
+    if (canUseDesktopStageExpansion()) {
+      const targetHeight = resolveDesktopStageTargetHeight();
+      if (targetHeight) {
+        el.stage.classList.toggle(
+          'quiz-stage--expanded',
+          targetHeight >= (window.innerHeight || 1) - 1
+        );
+        applyStageHeight(targetHeight, { animate });
+        return;
+      }
+    }
+
     el.stage.classList.remove('quiz-stage--animating');
     el.stage.classList.remove('quiz-stage--expanded');
     el.stage.style.height = '';
@@ -406,10 +477,20 @@
     if (options && options.animate) {
       stageAnimateNextSync = true;
     }
+    if (
+      !stageAnimateNextSync &&
+      stageExpandedByAction &&
+      el.stage &&
+      el.stage.classList.contains('quiz-stage--animating')
+    ) {
+      return;
+    }
     if (stageHeightSyncRaf) cancelAnimationFrame(stageHeightSyncRaf);
     stageHeightSyncRaf = window.requestAnimationFrame(() => {
       stageHeightSyncRaf = 0;
-      syncStageHeight();
+      const animate = stageAnimateNextSync;
+      stageAnimateNextSync = false;
+      syncStageHeight({ animate });
     });
   }
 
@@ -679,13 +760,14 @@
     if (active && typeof active.blur === 'function') active.blur();
     index = 0;
     score = 0;
-    showScreen(el.quiz);
+    stageExpandedByAction = true;
+    showScreen(el.quiz, { animate: true });
     renderCard();
     window.requestAnimationFrame(() => {
       scrollToQuizContent({
         targetSelector: '#page-content',
         targetTopPx: 0,
-        instant: true,
+        durationMs: 620,
       });
     });
   }
@@ -718,6 +800,14 @@
 
   bindSwipe();
   queueStageHeightSync();
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!canUseDesktopStageExpansion()) return;
+      queueStageHeightSync();
+    },
+    { passive: true }
+  );
   window.addEventListener('resize', queueStageHeightSync, { passive: true });
   window.addEventListener('load', queueStageHeightSync);
   if (document.fonts && document.fonts.ready) {

@@ -36,6 +36,14 @@
       fadeStartMoveRangeMul: 1,
       fadeSpanVhFrac: 0.36,
     },
+    mobileSnap: {
+      minSwipePx: 18,
+      minScrollPx: 32,
+      switchSwipePx: 42,
+      switchScrollPx: 90,
+      snapZoneBelowPageContentVhFrac: 0.08,
+      durationMs: 460,
+    },
     scroll: {
       durationMs: 760,
       minFactor: 0.045,
@@ -57,11 +65,20 @@
     pointerTargetY: 0,
     pointerCurrentX: 0,
     pointerCurrentY: 0,
+    heroTouchActive: false,
+    heroTouchStartX: 0,
+    heroTouchStartY: 0,
+    heroTouchLastX: 0,
+    heroTouchLastY: 0,
+    heroTouchStartScrollY: 0,
   };
 
   var sky = document.querySelector('.page-bg__sky');
   var grass = document.querySelector('.page-bg__grass');
   var pandaSlot = document.querySelector('.page-bg__panda-slot');
+  var pageContent = document.getElementById('page-content');
+  var quizStage = document.getElementById('quiz-stage');
+  var introScreen = document.getElementById('screen-intro');
   var heroEl = document.querySelector('.hero');
   var heroInner = document.querySelector('.hero__inner');
   var rootStyle = document.documentElement.style;
@@ -95,7 +112,18 @@
     return a + (b - a) * t;
   }
 
+  function isMobileViewport() {
+    return Boolean(mqlMobile && mqlMobile.matches);
+  }
+
   function computeHeroMetrics(y, vh, cfg) {
+    if (isMobileViewport()) {
+      return {
+        height: Math.round(vh),
+        progress: 0,
+        easedProgress: 0,
+      };
+    }
     var rootPx =
       parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     var minH = Math.max(cfg.minHeroRem * rootPx, vh * cfg.minHeroFrac);
@@ -201,6 +229,20 @@
     return -pointerValue * Math.min(halfOverflow, size * frac);
   }
 
+  function getPandaConfig() {
+    if (!isMobileViewport()) return CONFIG.panda;
+    return {
+      baseScale: 1.18,
+      moveRangeVhFrac: 0.44,
+      easePow: 2.2,
+      maxTyVhMul: 2.15,
+      scaleAmp: 4.15,
+      pointerShiftFrac: 0.05,
+      fadeStartMoveRangeMul: 1.18,
+      fadeSpanVhFrac: 0.62,
+    };
+  }
+
   function updateSkyGrass(y, heroVisible) {
     var skyY = Math.round(y * CONFIG.skyYPerScroll);
     var grassY = Math.round(y * CONFIG.grassYPerScroll);
@@ -248,7 +290,6 @@
    */
   function updatePanda(scrollY, vh, cfg, heroVisible) {
     if (!pandaSlot) return;
-    var isMobile = mqlMobile && mqlMobile.matches;
     var hRef = vh;
     var moveRange = hRef * cfg.moveRangeVhFrac;
     var sm = moveRange > 0 ? scrollY / moveRange : 0;
@@ -283,9 +324,7 @@
       opacity = 1 - smoothstep(Math.min(1, Math.max(0, fu)));
     }
 
-    var translate = isMobile
-      ? 'translate3d(calc(-50% + ' + tx + 'px), ' + ty + 'px, 0) '
-      : 'translate3d(' + tx + 'px,' + ty + 'px, 0) ';
+    var translate = 'translate3d(' + tx + 'px,' + ty + 'px, 0) ';
     var transform = translate + 'scale(' + scale.toFixed(4) + ')';
     var opacityValue = heroVisible ? String(opacity) : '0';
 
@@ -303,6 +342,7 @@
   function frame() {
     var vh = window.innerHeight || 1;
     var y = window.scrollY || window.pageYOffset;
+    var isMobile = isMobileViewport();
     var pointerMoving = updatePointerMotion();
     var heroExitY = computeHeroExitScrollY(vh, CONFIG.hero);
     var heroVisible = y < heroExitY;
@@ -317,9 +357,9 @@
       updateHeroHeight(heroH);
     }
 
-    if (heroEl) updateHeroInner(heroProgress, vh, CONFIG.hero);
+    if (heroEl) updateHeroInner(isMobile ? 0 : heroProgress, vh, CONFIG.hero);
     updateSkyGrass(effectY, heroVisible);
-    updatePanda(effectY, vh, CONFIG.panda, heroVisible);
+    updatePanda(effectY, vh, getPandaConfig(), heroVisible);
     return pointerMoving;
   }
 
@@ -393,6 +433,22 @@
   window.addEventListener('touchstart', cancelTargetScrollFromUserInput, {
     passive: true,
   });
+  window.addEventListener('touchstart', handleHeroTouchStart, { passive: true });
+  window.addEventListener('touchmove', handleHeroTouchMove, { passive: true });
+  window.addEventListener(
+    'touchend',
+    function () {
+      requestAnimationFrame(maybeSnapHeroToPageContent);
+    },
+    { passive: true }
+  );
+  window.addEventListener(
+    'touchcancel',
+    function () {
+      state.heroTouchActive = false;
+    },
+    { passive: true }
+  );
   window.addEventListener('pointerdown', cancelTargetScrollFromUserInput, {
     passive: true,
   });
@@ -430,6 +486,128 @@
     cancelTargetScroll();
   }
 
+  function canUseMobileHeroSnap() {
+    return Boolean(mqlMobile && mqlMobile.matches && heroEl && pageContent);
+  }
+
+  function getPageContentScrollY() {
+    if (!pageContent) return 0;
+    return Math.max(
+      0,
+      Math.round(pageContent.getBoundingClientRect().top + getScrollY())
+    );
+  }
+
+  function getNearestSnapIndex(points, y) {
+    if (!points || !points.length) return 0;
+    var nearestIndex = 0;
+    var nearestDistance = Math.abs(points[0] - y);
+    var i = 1;
+    for (; i < points.length; i += 1) {
+      var distance = Math.abs(points[i] - y);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = i;
+      }
+    }
+    return nearestIndex;
+  }
+
+  function handleHeroTouchStart(e) {
+    if (!canUseMobileHeroSnap()) return;
+    if (!e.touches || e.touches.length !== 1) return;
+    if (
+      e.target &&
+      quizStage &&
+      introScreen &&
+      introScreen.hidden &&
+      quizStage.contains(e.target)
+    ) {
+      state.heroTouchActive = false;
+      return;
+    }
+
+    var vh = window.innerHeight || 1;
+    var heroExitY = computeHeroExitScrollY(vh, CONFIG.hero);
+    var pageContentY = getPageContentScrollY();
+    var maxSnapY =
+      pageContentY +
+      Math.round(vh * CONFIG.mobileSnap.snapZoneBelowPageContentVhFrac);
+    var y = getScrollY();
+    if (y < 0 || y > maxSnapY || y >= heroExitY + Math.round(vh * 0.5)) {
+      state.heroTouchActive = false;
+      return;
+    }
+
+    state.heroTouchActive = true;
+    state.heroTouchStartX = e.touches[0].clientX;
+    state.heroTouchStartY = e.touches[0].clientY;
+    state.heroTouchLastX = e.touches[0].clientX;
+    state.heroTouchLastY = e.touches[0].clientY;
+    state.heroTouchStartScrollY = y;
+  }
+
+  function handleHeroTouchMove(e) {
+    if (!state.heroTouchActive) return;
+    if (!e.touches || e.touches.length !== 1) return;
+    state.heroTouchLastX = e.touches[0].clientX;
+    state.heroTouchLastY = e.touches[0].clientY;
+  }
+
+  function maybeSnapHeroToPageContent() {
+    if (!state.heroTouchActive || !canUseMobileHeroSnap()) {
+      state.heroTouchActive = false;
+      return;
+    }
+
+    state.heroTouchActive = false;
+
+    var vh = window.innerHeight || 1;
+    var currentY = getScrollY();
+    var currentX = state.heroTouchLastX;
+    var pageContentY = getPageContentScrollY();
+    var snapCfg = CONFIG.mobileSnap;
+    var maxSnapY =
+      pageContentY +
+      Math.round(vh * snapCfg.snapZoneBelowPageContentVhFrac);
+    var deltaFingerY = state.heroTouchLastY - state.heroTouchStartY;
+    var deltaFingerX = currentX - state.heroTouchStartX;
+    var deltaScrollY = currentY - state.heroTouchStartScrollY;
+    var absFingerY = Math.abs(deltaFingerY);
+    var absFingerX = Math.abs(deltaFingerX);
+    var absScrollY = Math.abs(deltaScrollY);
+    var snapPoints = [0, pageContentY];
+    var startIndex = getNearestSnapIndex(snapPoints, state.heroTouchStartScrollY);
+    var nearestIndex = getNearestSnapIndex(snapPoints, currentY);
+    var targetIndex = nearestIndex;
+    var isVerticalGesture =
+      absFingerY >= snapCfg.minSwipePx && absFingerY >= absFingerX * 0.9;
+
+    if (currentY < 0 || currentY > maxSnapY) return;
+
+    if (isVerticalGesture && absScrollY >= snapCfg.minScrollPx) {
+      var isTowardNext = deltaScrollY > 0 || deltaFingerY < 0;
+      var isStrongGesture =
+        absFingerY >= snapCfg.switchSwipePx ||
+        absScrollY >= snapCfg.switchScrollPx;
+
+      if (isStrongGesture) {
+        if (isTowardNext) targetIndex = Math.min(startIndex + 1, snapPoints.length - 1);
+        else targetIndex = Math.max(startIndex - 1, 0);
+      }
+    }
+
+    if (targetIndex <= 0) {
+      scrollToDocumentYSmooth(0, snapCfg.durationMs);
+      return;
+    }
+
+    scrollTargetIntoViewSmooth(pageContent, {
+      targetTopPx: 0,
+      durationMs: snapCfg.durationMs,
+    });
+  }
+
   function scrollToDocumentY(topPx) {
     var y = Math.max(0, Math.round(topPx));
     var html = document.documentElement;
@@ -437,6 +615,50 @@
     html.style.scrollBehavior = 'auto';
     window.scrollTo({ left: 0, top: y, behavior: 'auto' });
     html.style.scrollBehavior = prev;
+  }
+
+  function scrollToDocumentYSmooth(topPx, durationMs) {
+    cancelTargetScroll();
+
+    var targetY = Math.max(0, Math.round(topPx));
+    var frameCount = 0;
+    var scrollCfg = CONFIG.scroll;
+    var startedAt = 0;
+
+    function step(now) {
+      if (!startedAt) startedAt = now;
+      frameCount += 1;
+
+      var currentY = getScrollY();
+      var delta = targetY - currentY;
+      var deltaAbs = Math.abs(delta);
+
+      if (deltaAbs <= scrollCfg.settleTolerancePx || frameCount >= scrollCfg.maxFrames) {
+        scrollToDocumentY(targetY);
+        scrollAnimationId = 0;
+        scheduleFrame();
+        return;
+      }
+
+      var progress = durationMs > 0 ? (now - startedAt) / durationMs : 1;
+      var easedProgress = easeIn(progress, scrollCfg.easePow);
+      var factor = mix(scrollCfg.minFactor, scrollCfg.maxFactor, easedProgress);
+
+      if (deltaAbs < 48) factor = Math.min(factor, 0.24);
+      if (deltaAbs < 24) factor = Math.min(factor, 0.18);
+      if (deltaAbs < 10) factor = Math.min(factor, 0.12);
+
+      var nextY = currentY + delta * factor;
+      if (Math.round(nextY) === Math.round(currentY)) {
+        nextY = currentY + (delta > 0 ? 1 : -1);
+      }
+
+      scrollToDocumentY(nextY);
+      scheduleFrame();
+      scrollAnimationId = requestAnimationFrame(step);
+    }
+
+    scrollAnimationId = requestAnimationFrame(step);
   }
 
   function resolveTargetViewportTop(target, options) {
