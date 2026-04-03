@@ -41,7 +41,7 @@
       minScrollPx: 32,
       switchSwipePx: 42,
       switchScrollPx: 90,
-      snapZoneBelowPageContentVhFrac: 0.08,
+      snapZoneBelowPageContentVhFrac: 0.18,
       durationMs: 460,
     },
     scroll: {
@@ -487,7 +487,19 @@
   }
 
   function canUseMobileHeroSnap() {
-    return Boolean(mqlMobile && mqlMobile.matches && heroEl && pageContent);
+    return Boolean(
+      mqlMobile &&
+        mqlMobile.matches &&
+        heroEl &&
+        pageContent &&
+        introScreen &&
+        !introScreen.hidden
+    );
+  }
+
+  function getMobileSnapMaxY(vh) {
+    var snapWindow = Math.round(vh * CONFIG.mobileSnap.snapZoneBelowPageContentVhFrac);
+    return getPageContentScrollY() + snapWindow;
   }
 
   function getPageContentScrollY() {
@@ -516,23 +528,9 @@
   function handleHeroTouchStart(e) {
     if (!canUseMobileHeroSnap()) return;
     if (!e.touches || e.touches.length !== 1) return;
-    if (
-      e.target &&
-      quizStage &&
-      introScreen &&
-      introScreen.hidden &&
-      quizStage.contains(e.target)
-    ) {
-      state.heroTouchActive = false;
-      return;
-    }
-
     var vh = window.innerHeight || 1;
     var heroExitY = computeHeroExitScrollY(vh, CONFIG.hero);
-    var pageContentY = getPageContentScrollY();
-    var maxSnapY =
-      pageContentY +
-      Math.round(vh * CONFIG.mobileSnap.snapZoneBelowPageContentVhFrac);
+    var maxSnapY = getMobileSnapMaxY(vh);
     var y = getScrollY();
     if (y < 0 || y > maxSnapY || y >= heroExitY + Math.round(vh * 0.5)) {
       state.heroTouchActive = false;
@@ -565,11 +563,9 @@
     var vh = window.innerHeight || 1;
     var currentY = getScrollY();
     var currentX = state.heroTouchLastX;
-    var pageContentY = getPageContentScrollY();
     var snapCfg = CONFIG.mobileSnap;
-    var maxSnapY =
-      pageContentY +
-      Math.round(vh * snapCfg.snapZoneBelowPageContentVhFrac);
+    var pageContentY = getPageContentScrollY();
+    var maxSnapY = getMobileSnapMaxY(vh);
     var deltaFingerY = state.heroTouchLastY - state.heroTouchStartY;
     var deltaFingerX = currentX - state.heroTouchStartX;
     var deltaScrollY = currentY - state.heroTouchStartScrollY;

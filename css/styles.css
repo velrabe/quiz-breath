@@ -92,6 +92,7 @@ html {
   background: transparent;
   /* Hero сам меняет высоту во время scroll, anchoring здесь даёт видимый джиттер. */
   overflow-anchor: none;
+  overflow-x: hidden;
 }
 
 body {
@@ -101,6 +102,7 @@ body {
   background: transparent;
   color: var(--text);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 a {
@@ -117,6 +119,7 @@ a:hover {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
 /* Небо: полная ширина, второй кадр — отражение по Y, стык по нижнему краю первого */
@@ -438,26 +441,17 @@ a:hover {
 }
 
 @media (max-width: 767px) {
-  .page-content,
-  .page-content__inner,
-  .page-main,
-  .quiz-stage {
-    min-height: 100dvh;
-  }
-
   .page-content__inner {
-    display: flex;
-    flex-direction: column;
     width: 100%;
     max-width: none;
-    padding: 3rem 0;
+    padding: 0;
   }
 
   .page-main {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
     width: 100%;
+    min-height: 100dvh;
+    padding: 3rem 0;
+    box-sizing: border-box;
   }
 
   .hero__inner {
@@ -577,11 +571,13 @@ a:hover {
   .quiz-stage {
     width: 100%;
     max-width: none;
-    flex: 1 1 auto;
+    min-height: calc(100dvh - 6rem);
+    height: calc(100dvh - 6rem);
   }
 
   .quiz-stage > .screen:not([hidden]) {
-    min-height: 100dvh;
+    min-height: 100%;
+    height: 100%;
     width: 100%;
     max-width: none;
     align-self: stretch;
@@ -594,28 +590,49 @@ a:hover {
   }
 
   #screen-quiz.screen--quiz {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
     min-height: 100%;
+    height: 100%;
     padding: 0;
-    justify-content: space-between;
+    justify-content: stretch;
   }
 
   #screen-quiz .quiz-top {
     margin-bottom: 0;
-    min-height: auto;
+    min-height: 0;
+    padding: 0;
   }
 
   #screen-quiz .quiz-card-area {
     flex: 1 1 auto;
+    display: flex;
+    align-items: center;
     justify-content: center;
     min-height: 0;
+    padding: 0;
   }
 
   #screen-quiz .card-wrap {
     flex: 1 1 auto;
+    width: 100%;
+    margin: 0;
   }
 
   #screen-quiz .quiz-bottom {
     margin-top: 0;
+    padding: 0;
+  }
+
+  #screen-quiz .quiz-buttons--main {
+    min-height: 5.25rem;
+  }
+
+  #screen-quiz .quiz-actions-row,
+  #screen-quiz .quiz-actions-row--next,
+  #screen-quiz.quiz-screen--answered #quiz-answer-actions,
+  #screen-quiz.quiz-screen--answered #quiz-next-actions {
+    transform: none;
   }
 
   #screen-intro .quiz-card-area--intro {
@@ -624,6 +641,11 @@ a:hover {
 
   #screen-intro .screen-intro__body {
     justify-content: center;
+  }
+
+  #feedback-card #feedback-explanation {
+    font-size: 1rem;
+    line-height: 1.45;
   }
 }
 
@@ -1461,4 +1483,129 @@ button:disabled {
   line-height: 1.35;
   color: var(--muted);
   text-align: right;
+}
+
+@media (max-width: 767px) {
+  .page-content__inner {
+    display: block;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  .page-main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100dvh;
+    padding: 3rem 0;
+    box-sizing: border-box;
+  }
+
+  .quiz-stage {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    min-height: calc(100dvh - 6rem);
+    height: calc(100dvh - 6rem);
+    margin: 0;
+    transition: none;
+  }
+
+  .quiz-stage > .screen:not([hidden]) {
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    height: 100%;
+    margin: 0;
+    align-self: stretch;
+    padding: 0;
+  }
+
+  #screen-quiz.screen--quiz {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100%;
+    height: 100%;
+    padding: 0;
+    justify-content: stretch;
+  }
+
+  #screen-quiz .quiz-top {
+    flex: none;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  #screen-quiz .quiz-card-area {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 0;
+    min-height: 0;
+    padding: 0;
+  }
+
+  #screen-quiz .card-wrap {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .quiz-card-stack {
+    align-items: stretch;
+  }
+
+  #screen-quiz .quiz-bottom {
+    flex: none;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #screen-quiz .quiz-buttons--main {
+    width: 100%;
+    min-height: 5.25rem;
+    gap: 1rem;
+  }
+
+  #screen-quiz .quiz-actions-stack {
+    width: 100%;
+  }
+
+  #screen-quiz .quiz-actions-row,
+  #screen-quiz .quiz-actions-row--next,
+  #screen-quiz.quiz-screen--answered #quiz-answer-actions,
+  #screen-quiz.quiz-screen--answered #quiz-next-actions {
+    width: 100%;
+    min-height: 5.25rem;
+    transform: none;
+  }
+
+  #quiz-next-actions {
+    display: flex;
+    align-items: stretch;
+  }
+
+  #btn-feedback-next {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  #screen-quiz .swipe-hint {
+    margin-top: 0.9rem;
+    margin-bottom: 0;
+  }
+
+  #feedback-card #feedback-explanation {
+    font-size: 1rem;
+    line-height: 1.45;
+  }
 }
