@@ -562,14 +562,14 @@ a:hover {
 
   .page-bg__panda-slot {
     left: auto;
-    right: -6vw;
-    bottom: -2dvh;
+    right: 0;
+    bottom: 0;
     transform-origin: right bottom;
   }
 
   .page-bg__panda {
-    width: min(98vw, calc(var(--panda-mobile-max-w) * 1.08));
-    max-width: none;
+    width: min(60vw, calc(var(--panda-mobile-max-w) * 0.7));
+    max-width: 60vw;
     height: auto;
     max-height: 68dvh;
   }
