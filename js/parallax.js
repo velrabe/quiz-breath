@@ -44,6 +44,7 @@
   var pandaSlot = document.querySelector('.page-bg__panda-slot');
   var heroEl = document.querySelector('.hero');
   var heroInner = document.querySelector('.hero__inner');
+  var heroCtaRow = document.querySelector('.hero__cta-row');
   var heroCta = document.querySelector('a.hero-cta[href^="#"]');
   var rootStyle = document.documentElement.style;
   var body = document.body;
@@ -66,6 +67,7 @@
     transitionTo: 1,
     heroHeight: null,
     heroInnerY: null,
+    heroCtaRowY: null,
     skyTransform: '',
     grassTransform: '',
     grassOpacity: '',
@@ -177,6 +179,23 @@
     heroInner.style.transform = 'translate3d(0,' + translateY + 'px,0)';
   }
 
+  function updateHeroCtaRow(progress, vh) {
+    if (!heroCtaRow) return;
+    if (!isMobileViewport()) {
+      if (state.heroCtaRowY !== 0) {
+        state.heroCtaRowY = 0;
+        heroCtaRow.style.transform = '';
+      }
+      return;
+    }
+
+    var eased = easeIn(progress, CONFIG.hero.easePow);
+    var translateY = Math.round(vh * 1.18 * eased);
+    if (state.heroCtaRowY === translateY) return;
+    state.heroCtaRowY = translateY;
+    heroCtaRow.style.transform = 'translate3d(0,' + translateY + 'px,0)';
+  }
+
   function updateSkyGrass(progress, vh) {
     var motionProgress = smoothstep(progress);
     var virtualY = vh * motionProgress;
@@ -284,6 +303,7 @@
     var pointerMoving = updatePointerMotion();
     updateHeroHeight(vh);
     updateHeroInner(state.progress, vh);
+    updateHeroCtaRow(state.progress, vh);
     updateSkyGrass(state.progress, vh);
     updatePanda(state.progress, vh);
     return pointerMoving || state.transitionActive;
@@ -369,6 +389,7 @@
   }
 
   if (heroInner) heroInner.style.willChange = 'transform';
+  if (heroCtaRow) heroCtaRow.style.willChange = 'transform';
   if (heroEl) heroEl.style.willChange = 'height';
   if (sky) sky.style.willChange = 'transform';
   if (grass) grass.style.willChange = 'transform, opacity';
