@@ -157,6 +157,7 @@ a:hover {
   object-position: center bottom;
   transform-origin: center center;
   transform: scale(1.1);
+  transition: bottom 420ms ease;
 }
 
 .page-bg__panda-slot {
@@ -168,6 +169,9 @@ a:hover {
   transform-origin: center center;
   transform: scale(1.1);
   opacity: 1;
+  transition:
+    right 420ms ease,
+    bottom 420ms ease;
 }
 
 .page-bg__panda {
@@ -649,6 +653,314 @@ a:hover {
   }
 }
 
+/* Experience v2: hero и quiz — два состояния одного экрана, без scroll-driven анимации */
+body.experience {
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.experience-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.experience-main {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.experience-shell .hero,
+.experience-shell .page-content {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  transition:
+    opacity 360ms ease,
+    visibility 360ms linear;
+}
+
+.experience-shell .page-content {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.experience--landing .page-content,
+.experience--transitioning .page-content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.experience--landing .hero,
+.experience--transitioning .hero {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.experience--transitioning .hero {
+  pointer-events: none;
+}
+
+.experience--quiz-active .hero {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.experience--quiz-active .page-content {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.experience-shell #screen-intro {
+  display: none !important;
+}
+
+.experience-shell .page-content__inner {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.experience-shell .page-main {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  padding: 3rem 0;
+  background: transparent;
+}
+
+.experience-shell .quiz-stage {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--maxw);
+  min-height: 100%;
+  height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0;
+  transition: none;
+}
+
+.experience-shell .quiz-stage > .screen:not([hidden]) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(40rem, 100%);
+  min-height: 100%;
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+  align-self: stretch;
+  padding: 0;
+}
+
+.experience-shell #screen-quiz:not([hidden]) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+}
+
+.experience-shell #screen-quiz .quiz-top {
+  margin-bottom: 0;
+}
+
+.experience-shell #screen-quiz .quiz-card-area {
+  min-height: 0;
+}
+
+.experience-shell #screen-quiz .card-wrap {
+  margin: 0;
+}
+
+.experience-shell .quiz-stage .screen {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.experience-shell .site-footer {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 767px) {
+  .experience-shell .page-main {
+    padding: 3rem 2rem;
+  }
+
+  .experience-shell .quiz-stage {
+    max-width: none;
+  }
+
+  .experience-shell .quiz-stage > .screen:not([hidden]) {
+    max-width: none;
+  }
+}
+
+/* Experience shell: hero и quiz живут как два состояния одного экрана, footer всегда снизу */
+body.experience {
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.experience-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.experience-main {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.experience-shell .hero,
+.experience-shell .page-content {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.experience-shell .hero,
+.experience-shell .page-content {
+  transition:
+    opacity 360ms ease,
+    visibility 360ms linear;
+}
+
+.experience-shell .hero {
+  height: auto;
+  min-height: 0;
+}
+
+.experience-shell .page-content {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.experience--landing .page-content,
+.experience--transitioning .page-content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.experience--landing .hero,
+.experience--transitioning .hero {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.experience--transitioning .hero {
+  pointer-events: none;
+}
+
+.experience--quiz-active .hero {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.experience--quiz-active .page-content {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.experience-shell .page-content__inner {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.experience-shell .page-main {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.experience-shell .quiz-stage {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--maxw);
+  min-height: 100%;
+  height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2rem 0;
+}
+
+.experience-shell .quiz-stage > .screen:not([hidden]) {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: min(40rem, 100%);
+  min-height: 100%;
+  height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  align-self: stretch;
+}
+
+.experience-shell #screen-intro {
+  display: none !important;
+}
+
+.experience-shell .site-footer {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 767px) {
+  .experience-shell .page-main {
+    padding: 3rem 2rem;
+  }
+
+  .experience-shell .quiz-stage {
+    max-width: none;
+    padding: 0;
+  }
+
+  .experience-shell .quiz-stage > .screen:not([hidden]) {
+    max-width: none;
+  }
+}
+
 /* Main + баннер: фон на всю ширину; ограничение колонки — как у .hero__inner */
 .page-content {
   position: relative;
@@ -823,6 +1135,44 @@ a:hover {
   margin-top: 0.9rem;
 }
 
+@media (min-width: 768px) {
+  #screen-intro.screen--quiz-layout {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 60dvh;
+  }
+
+  #screen-intro .quiz-top--intro,
+  #screen-intro .quiz-card-area--intro,
+  #screen-intro .quiz-bottom--intro {
+    width: 100%;
+    max-width: 32rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #screen-intro .quiz-top--intro {
+    min-height: 0;
+    margin-bottom: 1.25rem;
+  }
+
+  #screen-intro .quiz-card-area--intro {
+    flex: 0 0 auto;
+    justify-content: center;
+  }
+
+  #screen-intro .screen-intro__body {
+    padding: 0;
+  }
+
+  #screen-intro .quiz-bottom--intro {
+    flex: 0 0 auto;
+    margin-top: 1.25rem;
+  }
+}
+
 /* Квиз и пояснение: одна сетка и те же размеры трёх зон */
 #screen-quiz.screen--quiz,
 #screen-quiz .quiz-top {
@@ -947,7 +1297,7 @@ a:hover {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   min-height: 0;
   padding: 0 0.5rem;
@@ -980,12 +1330,29 @@ a:hover {
   text-align: left;
 }
 
+#screen-result .result-actions {
+  width: 100%;
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 #screen-result .lead-form input {
   max-width: none;
+  min-height: 3.75rem;
+  padding: 0.9rem 1rem;
+  font-size: 1.1rem;
+  border-radius: 0.875rem;
 }
 
 #screen-result .consent {
   text-align: left;
+}
+
+#screen-result .quiz-bottom--result {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .screen[hidden] {
@@ -1018,6 +1385,7 @@ h1 {
 }
 
 .consent--form {
+  display: flex;
   margin-top: 1.25rem;
   margin-bottom: 0.25rem;
   flex-direction: row;
@@ -1026,8 +1394,15 @@ h1 {
   justify-content: flex-start;
 }
 
+.consent--form input {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+}
+
 .consent--form span {
+  display: block;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .actions {
@@ -1063,6 +1438,18 @@ button:disabled {
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent);
+  border-color: rgba(252, 128, 28, 0.32);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(252, 128, 28, 0.52);
+  color: var(--accent-hover);
 }
 
 .btn-myth {
@@ -1101,6 +1488,24 @@ button:disabled {
   font-size: 0.85rem;
   color: var(--muted);
   text-align: center;
+}
+
+.quiz-top__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.quiz-top__restart {
+  display: none;
+  padding: 0.8rem 1.25rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 1.125rem;
+  white-space: nowrap;
 }
 
 .card-wrap {
@@ -1272,6 +1677,13 @@ button:disabled {
   transform: translateY(0.65rem);
 }
 
+.quiz-actions-row--review {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.65rem);
+  justify-content: center;
+}
+
 #screen-quiz.quiz-screen--answered #quiz-answer-actions {
   opacity: 0;
   pointer-events: none;
@@ -1282,6 +1694,122 @@ button:disabled {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+#screen-quiz.quiz-screen--review #quiz-answer-actions,
+#screen-quiz.quiz-screen--review #quiz-next-actions {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.45rem);
+}
+
+#screen-quiz.quiz-screen--review #quiz-review-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+#screen-quiz.quiz-screen--review .quiz-card-area {
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+#screen-quiz.quiz-screen--review .card-wrap {
+  align-items: stretch;
+}
+
+#screen-quiz.quiz-screen--review .quiz-card-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+#screen-quiz.quiz-screen--review .quiz-card-stack > #quiz-card,
+#screen-quiz.quiz-screen--review .quiz-card-stack > .quiz-feedback-inline {
+  grid-area: auto;
+}
+
+#screen-quiz.quiz-screen--review .quiz-feedback-inline {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+#screen-quiz.quiz-screen--review #quiz-card {
+  min-height: 0;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+#screen-quiz.quiz-screen--review .card-question-media-frame {
+  aspect-ratio: 2.25 / 1;
+}
+
+#screen-quiz.quiz-screen--review #card-question-text {
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+#screen-quiz.quiz-screen--review #feedback-card #feedback-explanation {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  margin-bottom: 0.9rem;
+}
+
+#screen-quiz.quiz-screen--review .feedback-head {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+#screen-quiz.quiz-screen--review .sources-block {
+  margin-top: 0.9rem;
+}
+
+#screen-quiz.quiz-screen--review .source-tag {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.55rem;
+}
+
+#screen-quiz.quiz-screen--review .quiz-top__row {
+  justify-content: space-between;
+}
+
+#screen-quiz.quiz-screen--review .quiz-top__restart {
+  display: inline-flex;
+}
+
+#screen-quiz.quiz-screen--review #quiz-swipe-hint {
+  opacity: 1;
+}
+
+@media (max-width: 767px) {
+  #screen-quiz.quiz-screen--review .quiz-card-stack {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  #screen-quiz.quiz-screen--review #quiz-card {
+    padding: 0.85rem;
+    gap: 0.85rem;
+  }
+
+  #screen-quiz.quiz-screen--review .card-question-media-frame {
+    aspect-ratio: 2 / 1;
+  }
+
+  #screen-quiz.quiz-screen--review #card-question-text {
+    font-size: 1.2rem;
+  }
+
+  #screen-quiz.quiz-screen--review #feedback-card #feedback-explanation {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  #screen-quiz.quiz-screen--review .feedback-head {
+    font-size: 1.65rem;
+  }
 }
 
 .feedback-head {
@@ -1364,6 +1892,31 @@ button:disabled {
 
 #btn-to-form {
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border-radius: 1.5rem;
+  padding: 1.625rem 3.5rem;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+#btn-to-form:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+@media (min-width: 768px) {
+  #btn-to-form {
+    font-size: 2.15rem;
+  }
 }
 
 .result-partner {
@@ -1433,6 +1986,27 @@ button:disabled {
   margin-bottom: 1rem;
 }
 
+#screen-result .lead-form .consent--form {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+#screen-result .lead-form .consent--form input {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0.2rem 0 0;
+  margin-bottom: 0;
+}
+
+#screen-result .lead-form .consent--form span {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .lead-note {
   font-size: 0.85rem;
   color: var(--muted);
@@ -1497,8 +2071,9 @@ button:disabled {
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: 100dvh;
     min-height: 100dvh;
-    padding: 3rem 0;
+    padding: 3rem 2rem;
     box-sizing: border-box;
   }
 
@@ -1506,17 +2081,20 @@ button:disabled {
     flex: 1 1 auto;
     width: 100%;
     max-width: none;
-    min-height: calc(100dvh - 6rem);
-    height: calc(100dvh - 6rem);
+    min-height: 0;
+    height: auto;
     margin: 0;
     transition: none;
   }
 
   .quiz-stage > .screen:not([hidden]) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     width: 100%;
     max-width: none;
-    min-height: 100%;
-    height: 100%;
+    min-height: 0;
+    height: auto;
     margin: 0;
     align-self: stretch;
     padding: 0;
@@ -1524,11 +2102,15 @@ button:disabled {
 
   #screen-quiz.screen--quiz {
     display: grid;
-    grid-template-rows: auto 1fr auto;
-    min-height: 100%;
+    flex: 1 1 auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
     height: 100%;
     padding: 0;
-    justify-content: stretch;
+    margin: 0;
+    align-content: stretch;
+    align-items: stretch;
+    justify-items: stretch;
   }
 
   #screen-quiz .quiz-top {
@@ -1545,6 +2127,7 @@ button:disabled {
     justify-content: center;
     align-items: stretch;
     gap: 0;
+    width: 100%;
     min-height: 0;
     padding: 0;
   }
@@ -1568,6 +2151,7 @@ button:disabled {
     width: 100%;
     margin: 0;
     padding: 0;
+    align-self: end;
   }
 
   #screen-quiz .quiz-buttons--main {
@@ -1584,9 +2168,17 @@ button:disabled {
   #screen-quiz .quiz-actions-row--next,
   #screen-quiz.quiz-screen--answered #quiz-answer-actions,
   #screen-quiz.quiz-screen--answered #quiz-next-actions {
+    display: flex;
+    align-items: stretch;
     width: 100%;
     min-height: 5.25rem;
     transform: none;
+  }
+
+  .quiz-buttons--main #btn-myth,
+  .quiz-buttons--main #btn-truth,
+  .quiz-buttons--main #btn-feedback-next {
+    font-size: 2rem;
   }
 
   #quiz-next-actions {
@@ -1607,5 +2199,401 @@ button:disabled {
   #feedback-card #feedback-explanation {
     font-size: 1rem;
     line-height: 1.45;
+  }
+}
+
+/* Experience v2 final overrides: click-only hero -> quiz transition */
+body.experience {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.experience-shell {
+  position: relative;
+  z-index: 1;
+  display: block;
+  min-height: 100dvh;
+}
+
+.experience-main {
+  position: relative;
+  min-height: 100dvh;
+}
+
+.experience-shell .hero,
+.experience-shell .page-content {
+  width: 100%;
+  min-height: 100dvh;
+}
+
+.experience-shell .page-content {
+  display: none;
+  overflow: visible;
+}
+
+.experience--landing .hero,
+.experience--transitioning .hero {
+  display: flex;
+}
+
+.experience--landing .page-content,
+.experience--transitioning .page-content {
+  display: none;
+}
+
+.experience--quiz-active .hero {
+  display: none;
+}
+
+.experience--quiz-active .page-content {
+  display: block;
+}
+
+.experience-shell #screen-intro {
+  display: none !important;
+}
+
+.experience-shell .page-content__inner {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  height: auto;
+  padding: 0;
+}
+
+.experience-shell .page-main {
+  display: flex;
+  width: 100%;
+  min-height: 100dvh;
+  height: auto;
+  padding: 3rem 0;
+  background: transparent;
+}
+
+.experience-shell .quiz-stage {
+  display: flex;
+  width: 100%;
+  max-width: var(--maxw);
+  min-height: calc(100dvh - 6rem);
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0;
+  transition: none;
+}
+
+.experience-shell .quiz-stage > .screen:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(40rem, 100%);
+  min-height: calc(100dvh - 6rem);
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+  align-self: stretch;
+  padding: 0;
+}
+
+.experience-shell #screen-quiz:not([hidden]) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: calc(100dvh - 6rem);
+}
+
+.experience-shell #screen-quiz .quiz-top {
+  margin-bottom: 0;
+}
+
+.experience-shell #screen-quiz .quiz-card-area {
+  min-height: 0;
+}
+
+.experience-shell #screen-quiz .card-wrap {
+  margin: 0;
+}
+
+.experience-shell .quiz-stage .screen {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.experience-shell .site-footer {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 767px) {
+  .experience-shell .page-main {
+    padding: 3rem 2rem;
+  }
+
+  .experience-shell .quiz-stage {
+    max-width: none;
+    min-height: calc(100dvh - 6rem);
+  }
+
+  .experience-shell .quiz-stage > .screen:not([hidden]) {
+    max-width: none;
+    min-height: calc(100dvh - 6rem);
+  }
+}
+
+/* Experience v3: body = stage + footer */
+body.experience {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.experience-stage {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.experience-stage .hero,
+.experience-stage .page-content {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.experience-stage .page-content,
+.experience-stage .success-screen {
+  display: none;
+}
+
+.experience-stage .page-content {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.experience--landing .experience-stage .hero,
+.experience--transitioning .experience-stage .hero {
+  display: flex;
+}
+
+.experience--landing .experience-stage .page-content,
+.experience--transitioning .experience-stage .page-content {
+  display: none;
+}
+
+.experience--quiz-active .experience-stage .hero {
+  display: none;
+}
+
+.experience--quiz-active .experience-stage .page-content {
+  display: block;
+}
+
+.experience--success-active .experience-stage .hero,
+.experience--success-active .experience-stage .page-content {
+  display: none;
+}
+
+.experience--success-active .experience-stage .success-screen {
+  display: flex;
+}
+
+.experience--success-active .page-bg__grass {
+  bottom: -8vh;
+}
+
+.experience--success-active .page-bg__panda-slot {
+  right: -8vw;
+  bottom: -14vh;
+}
+
+.experience-stage #screen-intro {
+  display: none !important;
+}
+
+.experience-stage .page-content__inner {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.experience-stage .page-main {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  padding: 3rem 0;
+  background: transparent;
+}
+
+.experience-stage .quiz-stage {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--maxw);
+  min-height: 100%;
+  height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0;
+  transition: none;
+}
+
+.experience-stage .quiz-stage > .screen:not([hidden]) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(40rem, 100%);
+  min-height: 100%;
+  height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  align-self: stretch;
+  padding: 0;
+}
+
+.experience-stage #screen-quiz:not([hidden]) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+}
+
+.experience-stage #screen-quiz .quiz-top {
+  margin-bottom: 0;
+}
+
+.experience-stage #screen-quiz .quiz-card-area {
+  min-height: 0;
+}
+
+.experience-stage #screen-quiz .card-wrap {
+  margin: 0;
+}
+
+.experience-stage .quiz-stage .screen {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.success-screen {
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.success-screen__inner {
+  width: 100%;
+  max-width: min(38rem, 100%);
+  margin: 0 auto;
+}
+
+.success-screen__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.success-screen__eyebrow {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  color: var(--hero-subtitle);
+}
+
+.success-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: normal;
+  font-size: clamp(2.5rem, 7vw, 4.75rem);
+  line-height: 0.95;
+  color: var(--hero-title);
+}
+
+.success-screen__text {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.success-screen__actions {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.success-screen__actions .btn-primary {
+  width: 100%;
+}
+
+.success-screen__link {
+  color: var(--hero-subtitle);
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+.success-screen__link:hover {
+  color: var(--text);
+}
+
+@media (max-width: 767px) {
+  .experience-stage .page-main {
+    padding: 3rem 2rem;
+  }
+
+  .experience-stage .quiz-stage {
+    max-width: none;
+  }
+
+  .experience-stage .quiz-stage > .screen:not([hidden]) {
+    max-width: none;
+  }
+
+  .quiz-top__row {
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .quiz-top__restart {
+    font-size: 1rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .success-screen {
+    padding: 3rem 2rem;
+  }
+
+  .success-screen__title {
+    font-size: 3rem;
+    line-height: 0.95;
+  }
+
+  .success-screen__text {
+    font-size: 1rem;
+  }
+
+  .experience--success-active .page-bg__grass {
+    bottom: -10vh;
+  }
+
+  .experience--success-active .page-bg__panda-slot {
+    right: -10vw;
+    bottom: -16vh;
   }
 }

@@ -6,13 +6,19 @@
   const DEFAULT_QUESTION_IMAGE = 'img/banners/banner.png';
 
   const el = {
-    stage: document.getElementById('quiz-stage'),
+    body: document.body,
     pageContent: document.getElementById('page-content'),
+    stage: document.getElementById('quiz-stage'),
     intro: document.getElementById('screen-intro'),
     quiz: document.getElementById('screen-quiz'),
     result: document.getElementById('screen-result'),
+    success: document.getElementById('screen-success'),
 
     btnStart: document.getElementById('btn-start'),
+    btnQuizRestart: document.getElementById('btn-quiz-restart'),
+    btnReviewPrev: document.getElementById('btn-review-prev'),
+    btnReviewNext: document.getElementById('btn-review-next'),
+    btnSuccessReview: document.getElementById('btn-success-review'),
 
     card: document.getElementById('quiz-card'),
     cardImage: document.getElementById('card-question-media'),
@@ -21,6 +27,7 @@
     quizHint: document.getElementById('quiz-swipe-hint'),
     answerActions: document.getElementById('quiz-answer-actions'),
     nextActions: document.getElementById('quiz-next-actions'),
+    reviewActions: document.getElementById('quiz-review-actions'),
     btnMyth: document.getElementById('btn-myth'),
     btnTruth: document.getElementById('btn-truth'),
 
@@ -45,14 +52,17 @@
   let cardAnimating = false;
   let cardFlyTimeoutId = 0;
   let questionAnswered = false;
+  let reviewMode = false;
+  let answers = [];
   const FLY_OUT_MS = 400;
-  let stageHeightSyncRaf = 0;
-  let stageHeightApplyRaf = 0;
-  let stageMode = 'intro';
-  let stageAnimateNextSync = false;
-  let stageExpandedByAction = false;
-  const mqlDesktop =
-    window.matchMedia && window.matchMedia('(min-width: 768px)');
+  const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
+  const REVIEW_QUIZ_HINT = 'Смахните карточку или используйте кнопки для перехода между ответами';
+  const EXPERIENCE_STATES = [
+    'experience--landing',
+    'experience--transitioning',
+    'experience--quiz-active',
+    'experience--success-active',
+  ];
 
   function createLinkOutIcon() {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -100,10 +110,6 @@
     return x * x * (3 - 2 * x);
   }
 
-  function clamp01(value) {
-    return Math.min(1, Math.max(0, value));
-  }
-
   function updateCardTextTint(dx) {
     if (!el.cardText) return;
     let t = 0;
@@ -126,19 +132,10 @@
     el.cardText.style.color = `rgb(${r},${g},${b})`;
   }
 
-  function getStageModeForScreen(screen) {
-    return screen === el.intro ? 'intro' : 'expanded';
-  }
-
-  function showScreen(screen, options) {
+  function showScreen(screen) {
     [el.intro, el.quiz, el.result].forEach((s) => {
       if (s) s.hidden = s !== screen;
     });
-    if (screen === el.intro && !(options && options.preserveExpanded)) {
-      stageExpandedByAction = false;
-    }
-    stageMode = getStageModeForScreen(screen);
-    queueStageHeightSync(options);
   }
 
   function tierCopy(correctCount) {
@@ -171,18 +168,35 @@
   function setQuizAnsweredState(answered) {
     if (el.quiz) {
       el.quiz.classList.toggle('quiz-screen--answered', answered);
+      el.quiz.classList.toggle('quiz-screen--review', reviewMode);
     }
     if (el.card) {
-      el.card.style.pointerEvents = answered ? 'none' : '';
+      el.card.style.pointerEvents = answered && !reviewMode ? 'none' : '';
     }
     if (el.answerActions) {
-      el.answerActions.setAttribute('aria-hidden', answered ? 'true' : 'false');
+      el.answerActions.setAttribute(
+        'aria-hidden',
+        answered || reviewMode ? 'true' : 'false'
+      );
     }
     if (el.nextActions) {
-      el.nextActions.setAttribute('aria-hidden', answered ? 'false' : 'true');
+      el.nextActions.setAttribute(
+        'aria-hidden',
+        answered && !reviewMode ? 'false' : 'true'
+      );
+    }
+    if (el.reviewActions) {
+      el.reviewActions.setAttribute('aria-hidden', reviewMode ? 'false' : 'true');
     }
     if (el.quizHint) {
-      el.quizHint.setAttribute('aria-hidden', answered ? 'true' : 'false');
+      el.quizHint.textContent = reviewMode ? REVIEW_QUIZ_HINT : DEFAULT_QUIZ_HINT;
+      el.quizHint.setAttribute(
+        'aria-hidden',
+        answered && !reviewMode ? 'true' : 'false'
+      );
+    }
+    if (el.btnQuizRestart) {
+      el.btnQuizRestart.hidden = !reviewMode;
     }
   }
 
@@ -249,251 +263,6 @@
     el.resultScore.textContent = `Правильных ответов: ${correctCount} из ${TOTAL}`;
   }
 
-  function preserveStageState() {
-    return {
-      hidden: [el.intro, el.quiz, el.result].map((screen) => ({
-        screen,
-        hidden: screen ? screen.hidden : true,
-      })),
-      cardText: el.cardText ? el.cardText.textContent : '',
-      cardImageSrc: el.cardImage ? el.cardImage.getAttribute('src') || '' : '',
-      cardImageAlt: el.cardImage ? el.cardImage.getAttribute('alt') || '' : '',
-      cardImageHidden: el.cardImage ? el.cardImage.hidden : true,
-      cardColor: el.cardText ? el.cardText.style.color : '',
-      cardTransition: el.card ? el.card.style.transition : '',
-      cardTransform: el.card ? el.card.style.transform : '',
-      cardOpacity: el.card ? el.card.style.opacity : '',
-      feedbackTitle: el.feedbackTitle ? el.feedbackTitle.textContent : '',
-      feedbackExplain: el.feedbackExplain ? el.feedbackExplain.textContent : '',
-      feedbackSources: el.feedbackSources ? el.feedbackSources.innerHTML : '',
-      feedbackCorrect: el.feedbackCard
-        ? el.feedbackCard.classList.contains('feedback--correct')
-        : false,
-      feedbackIncorrect: el.feedbackCard
-        ? el.feedbackCard.classList.contains('feedback--incorrect')
-        : false,
-      quizAnswered: el.quiz ? el.quiz.classList.contains('quiz-screen--answered') : false,
-      resultTier: el.resultTier ? el.resultTier.innerHTML : '',
-      resultScore: el.resultScore ? el.resultScore.textContent : '',
-    };
-  }
-
-  function restoreStageState(state) {
-    state.hidden.forEach(({ screen, hidden }) => {
-      if (screen) screen.hidden = hidden;
-    });
-
-    if (el.cardText) {
-      el.cardText.textContent = state.cardText;
-      el.cardText.style.color = state.cardColor;
-    }
-
-    if (el.cardImage) {
-      if (state.cardImageSrc) el.cardImage.src = state.cardImageSrc;
-      el.cardImage.alt = state.cardImageAlt;
-      el.cardImage.hidden = state.cardImageHidden;
-    }
-
-    if (el.card) {
-      el.card.style.transition = state.cardTransition;
-      el.card.style.transform = state.cardTransform;
-      el.card.style.opacity = state.cardOpacity;
-    }
-
-    if (el.feedbackTitle) el.feedbackTitle.textContent = state.feedbackTitle;
-    if (el.feedbackExplain) el.feedbackExplain.textContent = state.feedbackExplain;
-    if (el.feedbackSources) el.feedbackSources.innerHTML = state.feedbackSources;
-    if (el.feedbackCard) {
-      el.feedbackCard.classList.toggle('feedback--correct', state.feedbackCorrect);
-      el.feedbackCard.classList.toggle('feedback--incorrect', state.feedbackIncorrect);
-    }
-    setQuizAnsweredState(state.quizAnswered);
-
-    if (el.resultTier) el.resultTier.innerHTML = state.resultTier;
-    if (el.resultScore) el.resultScore.textContent = state.resultScore;
-  }
-
-  function measureCurrentStageHeight() {
-    if (!el.stage) return 0;
-    return Math.ceil(el.stage.getBoundingClientRect().height);
-  }
-
-  function showOnlyScreen(screen) {
-    [el.intro, el.quiz, el.result].forEach((node) => {
-      if (node) node.hidden = node !== screen;
-    });
-  }
-
-  function measureStageLayoutHeights() {
-    if (!el.stage) {
-      return { introHeight: 0, expandedHeight: 0 };
-    }
-    const state = preserveStageState();
-    const prevHeight = el.stage.style.height;
-    const prevTransition = el.stage.style.transition;
-    const wasAnimating = el.stage.classList.contains('quiz-stage--animating');
-    let introHeight = 0;
-    let expandedHeight = 0;
-
-    el.stage.classList.remove('quiz-stage--animating');
-    el.stage.style.transition = 'none';
-    el.stage.style.height = 'auto';
-
-    showOnlyScreen(el.intro);
-    introHeight = Math.max(introHeight, measureCurrentStageHeight());
-
-    questions.forEach((q, questionIndex) => {
-      showOnlyScreen(el.quiz);
-      renderQuestionCard(q);
-      if (el.progress) {
-        el.progress.textContent = `Вопрос ${Math.min(questionIndex + 1, TOTAL)} из ${TOTAL}`;
-      }
-      expandedHeight = Math.max(expandedHeight, measureCurrentStageHeight());
-    });
-
-    [0, Math.min(5, TOTAL), TOTAL].forEach((resultScore) => {
-      showOnlyScreen(el.result);
-      populateResult(resultScore);
-      expandedHeight = Math.max(expandedHeight, measureCurrentStageHeight());
-    });
-
-    restoreStageState(state);
-    el.stage.style.height = prevHeight;
-    el.stage.style.transition = prevTransition;
-    el.stage.classList.toggle('quiz-stage--animating', wasAnimating);
-
-    return {
-      introHeight,
-      expandedHeight: Math.max(introHeight, expandedHeight),
-    };
-  }
-
-  function applyStageHeight(nextHeight, options) {
-    if (!el.stage || !nextHeight) return;
-    const targetHeight = Math.max(0, Math.ceil(nextHeight));
-    const animate = Boolean(options && options.animate);
-    const currentHeight = Math.ceil(el.stage.getBoundingClientRect().height);
-
-    if (stageHeightApplyRaf) {
-      cancelAnimationFrame(stageHeightApplyRaf);
-      stageHeightApplyRaf = 0;
-    }
-
-    if (!animate || !currentHeight || Math.abs(currentHeight - targetHeight) < 2) {
-      const nextHeightValue = targetHeight + 'px';
-      if (
-        el.stage.style.height === nextHeightValue &&
-        !el.stage.classList.contains('quiz-stage--animating')
-      ) {
-        return;
-      }
-      el.stage.classList.remove('quiz-stage--animating');
-      el.stage.style.transition = 'none';
-      el.stage.style.height = nextHeightValue;
-      return;
-    }
-
-    el.stage.style.transition = 'none';
-    el.stage.style.height = currentHeight + 'px';
-    el.stage.offsetHeight;
-    el.stage.classList.add('quiz-stage--animating');
-
-    stageHeightApplyRaf = window.requestAnimationFrame(() => {
-      stageHeightApplyRaf = 0;
-      el.stage.style.transition = '';
-      el.stage.style.height = targetHeight + 'px';
-    });
-  }
-
-  function canUseDesktopStageExpansion() {
-    return Boolean(
-      el.stage &&
-        el.pageContent &&
-        mqlDesktop &&
-        mqlDesktop.matches
-    );
-  }
-
-  function measureVisibleStageNaturalHeight() {
-    if (!el.stage) return 0;
-    const prevHeight = el.stage.style.height;
-    const prevTransition = el.stage.style.transition;
-    const wasAnimating = el.stage.classList.contains('quiz-stage--animating');
-
-    el.stage.classList.remove('quiz-stage--animating');
-    el.stage.style.transition = 'none';
-    el.stage.style.height = 'auto';
-
-    const height = Math.ceil(el.stage.getBoundingClientRect().height);
-
-    el.stage.style.height = prevHeight;
-    el.stage.style.transition = prevTransition;
-    el.stage.classList.toggle('quiz-stage--animating', wasAnimating);
-    return height;
-  }
-
-  function resolveDesktopStageTargetHeight() {
-    if (!canUseDesktopStageExpansion()) return 0;
-    const naturalHeight = measureVisibleStageNaturalHeight();
-    if (!naturalHeight) return 0;
-
-    const vh = window.innerHeight || 1;
-    const expandedHeight = Math.max(naturalHeight, vh);
-
-    if (stageExpandedByAction) return expandedHeight;
-
-    const rect = el.pageContent.getBoundingClientRect();
-    const progress = smoothstep(clamp01((vh - rect.top) / vh));
-    return Math.round(naturalHeight + (expandedHeight - naturalHeight) * progress);
-  }
-
-  function syncStageHeight(options) {
-    if (!el.stage) return;
-    const animate = Boolean(options && options.animate);
-    if (stageHeightApplyRaf) {
-      cancelAnimationFrame(stageHeightApplyRaf);
-      stageHeightApplyRaf = 0;
-    }
-
-    if (canUseDesktopStageExpansion()) {
-      const targetHeight = resolveDesktopStageTargetHeight();
-      if (targetHeight) {
-        el.stage.classList.toggle(
-          'quiz-stage--expanded',
-          targetHeight >= (window.innerHeight || 1) - 1
-        );
-        applyStageHeight(targetHeight, { animate });
-        return;
-      }
-    }
-
-    el.stage.classList.remove('quiz-stage--animating');
-    el.stage.classList.remove('quiz-stage--expanded');
-    el.stage.style.height = '';
-    el.stage.style.transition = '';
-  }
-
-  function queueStageHeightSync(options) {
-    if (options && options.animate) {
-      stageAnimateNextSync = true;
-    }
-    if (
-      !stageAnimateNextSync &&
-      stageExpandedByAction &&
-      el.stage &&
-      el.stage.classList.contains('quiz-stage--animating')
-    ) {
-      return;
-    }
-    if (stageHeightSyncRaf) cancelAnimationFrame(stageHeightSyncRaf);
-    stageHeightSyncRaf = window.requestAnimationFrame(() => {
-      stageHeightSyncRaf = 0;
-      const animate = stageAnimateNextSync;
-      stageAnimateNextSync = false;
-      syncStageHeight({ animate });
-    });
-  }
-
   function renderCard() {
     if (index >= TOTAL) {
       finishQuiz();
@@ -503,6 +272,7 @@
       window.clearTimeout(cardFlyTimeoutId);
       cardFlyTimeoutId = 0;
     }
+    reviewMode = false;
     cardAnimating = false;
     questionAnswered = false;
     const q = questions[index];
@@ -515,7 +285,38 @@
     el.card.style.opacity = '1';
     cardOffsetX = 0;
     setProgress();
-    queueStageHeightSync();
+  }
+
+  function renderReviewCard() {
+    if (index < 0 || index >= TOTAL) return;
+    if (cardFlyTimeoutId) {
+      window.clearTimeout(cardFlyTimeoutId);
+      cardFlyTimeoutId = 0;
+    }
+    reviewMode = true;
+    cardAnimating = false;
+    questionAnswered = true;
+    const q = questions[index];
+    const answerRecord = answers[index] || {
+      choice: q.correct,
+      correct: true,
+    };
+    renderQuestionCard(q);
+    primeFeedback(q);
+    populateFeedback(q, answerRecord.correct);
+    el.cardText.style.color = '';
+    el.card.style.transition = '';
+    el.card.style.transform = '';
+    el.card.style.opacity = '1';
+    cardOffsetX = 0;
+    setProgress();
+    setQuizAnsweredState(true);
+    if (el.btnReviewPrev) {
+      el.btnReviewPrev.disabled = index <= 0;
+    }
+    if (el.btnReviewNext) {
+      el.btnReviewNext.disabled = index >= TOTAL - 1;
+    }
   }
 
   function answer(choice) {
@@ -524,6 +325,7 @@
     const correct = q.correct === choice;
     questionAnswered = true;
     if (correct) score += 1;
+    answers[index] = { choice, correct };
 
     setProgress();
     populateFeedback(q, correct);
@@ -531,6 +333,7 @@
   }
 
   function finishQuiz() {
+    reviewMode = false;
     populateResult(score);
     showScreen(el.result);
   }
@@ -543,6 +346,18 @@
       showScreen(el.quiz);
       renderCard();
     }
+  }
+
+  function goReviewPrev() {
+    if (!reviewMode || index <= 0) return;
+    index -= 1;
+    renderReviewCard();
+  }
+
+  function goReviewNext() {
+    if (!reviewMode || index >= TOTAL - 1) return;
+    index += 1;
+    renderReviewCard();
   }
 
   function flyCardOutAndAnswer(choice) {
@@ -591,25 +406,41 @@
     if (!card) return;
 
     function onDown(clientX, clientY) {
-      if (cardAnimating || questionAnswered) return;
+      if (cardAnimating || (questionAnswered && !reviewMode)) return;
       touchStartX = clientX;
       touchStartY = clientY;
       cardOffsetX = 0;
     }
 
     function onMove(clientX) {
-      if (cardAnimating || questionAnswered) return;
+      if (cardAnimating || (questionAnswered && !reviewMode)) return;
       cardOffsetX = clientX - touchStartX;
       const rot = cardOffsetX * 0.05;
       card.style.transform = `translateX(${cardOffsetX}px) rotate(${rot}deg)`;
+      if (reviewMode) {
+        card.style.opacity = '1';
+        return;
+      }
       const fade = 1 - Math.min(Math.abs(cardOffsetX) / 300, 0.35);
       card.style.opacity = String(fade);
       updateCardTextTint(cardOffsetX);
     }
 
     function onUp(clientX) {
-      if (cardAnimating || questionAnswered) return;
       const dx = clientX - touchStartX;
+      if (reviewMode) {
+        if (dx < -SWIPE_THRESHOLD) {
+          goReviewNext();
+        } else if (dx > SWIPE_THRESHOLD) {
+          goReviewPrev();
+        } else {
+          card.style.transform = '';
+          card.style.opacity = '1';
+          if (el.cardText) el.cardText.style.color = '';
+        }
+        return;
+      }
+      if (cardAnimating || questionAnswered) return;
       if (dx < -SWIPE_THRESHOLD) {
         flyCardOutAndAnswer('myth');
       } else if (dx > SWIPE_THRESHOLD) {
@@ -660,125 +491,87 @@
     });
   }
 
-  function scrollToQuizContent(options) {
-    function clamp01(value) {
-      return Math.min(1, Math.max(0, value));
-    }
+  function setExperienceState(nextState) {
+    if (!el.body) return;
+    EXPERIENCE_STATES.forEach((stateName) => {
+      el.body.classList.toggle(stateName, stateName === nextState);
+    });
+  }
 
-    function resolvePageContentScrollY() {
-      const parallaxConfig = window.QUIZ_SCROLL_PARALLAX_CONFIG;
-      const heroConfig = parallaxConfig && parallaxConfig.hero;
-      if (!heroConfig) return null;
-
-      const vh = window.innerHeight || 1;
-      const rootPx =
-        parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const minH = Math.max(heroConfig.minHeroRem * rootPx, vh * heroConfig.minHeroFrac);
-      const maxShrink = Math.min(vh * heroConfig.maxShrinkFrac, Math.max(0, vh - minH));
-
-      function computeHeroHeight(scrollY) {
-        const linearShrink = Math.min(
-          Math.max(0, scrollY * heroConfig.shrinkPerScroll),
-          maxShrink
-        );
-        const progress = maxShrink > 0 ? linearShrink / maxShrink : 0;
-        const easedProgress = Math.pow(clamp01(progress), heroConfig.easePow);
-        const shrink = maxShrink * easedProgress;
-        return Math.round(Math.max(minH, vh - shrink));
-      }
-
-      let low = 0;
-      let high = vh * 2;
-      for (let i = 0; i < 20; i += 1) {
-        const mid = (low + high) / 2;
-        const diff = computeHeroHeight(mid) - mid;
-        if (diff > 0) low = mid;
-        else high = mid;
-      }
-      return Math.max(0, Math.round(high));
+  function activateQuizExperience() {
+    index = 0;
+    score = 0;
+    answers = [];
+    reviewMode = false;
+    if (el.pageContent) {
+      el.pageContent.scrollTop = 0;
     }
-
-    var targetSelector = options && options.targetSelector;
-    var el =
-      (targetSelector ? document.querySelector(targetSelector) : null) ||
-      document.querySelector('.page-content') ||
-      document.getElementById('screen-quiz') ||
-      document.getElementById('quiz-stage') ||
-      document.getElementById('page-content-inner');
-    if (!el) return;
-    if (options && options.instant) {
-      var instantOffsetPx = 0;
-      if (typeof options.targetTopVh === 'number') {
-        instantOffsetPx = ((window.innerHeight || 1) * options.targetTopVh) / 100;
-      } else if (typeof options.targetTopPx === 'number') {
-        instantOffsetPx = options.targetTopPx;
-      }
-      var instantY =
-        targetSelector === '#page-content'
-          ? resolvePageContentScrollY()
-          : null;
-      if (typeof instantY !== 'number') {
-        instantY =
-          el.getBoundingClientRect().top +
-          (window.scrollY || window.pageYOffset || 0) -
-          instantOffsetPx;
-      } else {
-        instantY -= instantOffsetPx;
-      }
-      instantY = Math.max(0, Math.round(instantY));
-      var instantHtml = document.documentElement;
-      var instantPrev = instantHtml.style.scrollBehavior;
-      instantHtml.style.scrollBehavior = 'auto';
-      window.scrollTo({ left: 0, top: instantY, behavior: 'auto' });
-      instantHtml.style.scrollBehavior = instantPrev;
-      return;
-    }
-    if (typeof window.QUIZ_SCROLL_TO_TARGET === 'function') {
-      window.QUIZ_SCROLL_TO_TARGET(el, options);
-      return;
-    }
-    var offsetPx = 0;
-    if (options && typeof options.targetTopVh === 'number') {
-      offsetPx = ((window.innerHeight || 1) * options.targetTopVh) / 100;
-    } else if (options && typeof options.targetTopPx === 'number') {
-      offsetPx = options.targetTopPx;
-    }
-    var y =
-      el.getBoundingClientRect().top +
-      (window.scrollY || window.pageYOffset || 0) -
-      offsetPx;
-    y = Math.max(0, Math.round(y));
-    var html = document.documentElement;
-    var prev = html.style.scrollBehavior;
-    html.style.scrollBehavior = 'auto';
-    window.scrollTo({ left: 0, top: y, behavior: 'auto' });
-    html.style.scrollBehavior = prev;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    setExperienceState('experience--quiz-active');
+    showScreen(el.quiz);
+    renderCard();
   }
 
   function startQuiz() {
     var active = document.activeElement;
     if (active && typeof active.blur === 'function') active.blur();
-    index = 0;
-    score = 0;
-    stageExpandedByAction = true;
-    showScreen(el.quiz, { animate: true });
-    renderCard();
-    window.requestAnimationFrame(() => {
-      scrollToQuizContent({
-        targetSelector: '#page-content',
-        targetTopPx: 0,
-        durationMs: 620,
+    if (el.body && el.body.classList.contains('experience--transitioning')) return;
+    if (el.body && el.body.classList.contains('experience--landing')) {
+      if (typeof window.QUIZ_HERO_TRANSITION?.start === 'function') {
+        setExperienceState('experience--transitioning');
+        window.QUIZ_HERO_TRANSITION.start({
+          onComplete: activateQuizExperience,
+        });
+        return;
+      }
+    } else {
+      activateQuizExperience();
+      return;
+    }
+    if (typeof window.QUIZ_HERO_TRANSITION?.start === 'function') {
+      setExperienceState('experience--transitioning');
+      window.QUIZ_HERO_TRANSITION.start({
+        onComplete: activateQuizExperience,
       });
-    });
+      return;
+    }
+    activateQuizExperience();
   }
 
   window.QUIZ_START_FROM_HERO = startQuiz;
 
+  function openSuccessExperience() {
+    if (el.pageContent) {
+      el.pageContent.scrollTop = 0;
+    }
+    showScreen(el.result);
+    setExperienceState('experience--success-active');
+    if (typeof window.QUIZ_HERO_TRANSITION?.rewind === 'function') {
+      window.QUIZ_HERO_TRANSITION.rewind();
+    } else if (typeof window.QUIZ_HERO_TRANSITION?.reset === 'function') {
+      window.QUIZ_HERO_TRANSITION.reset();
+    }
+  }
+
+  function openReviewExperience() {
+    if (el.pageContent) {
+      el.pageContent.scrollTop = 0;
+    }
+    index = 0;
+    setExperienceState('experience--quiz-active');
+    showScreen(el.quiz);
+    renderReviewCard();
+  }
+
   el.btnStart?.addEventListener('click', startQuiz);
+  el.btnQuizRestart?.addEventListener('click', startQuiz);
 
   el.btnMyth?.addEventListener('click', () => flyCardOutAndAnswer('myth'));
   el.btnTruth?.addEventListener('click', () => flyCardOutAndAnswer('truth'));
   el.btnNext?.addEventListener('click', goNextFromFeedback);
+  el.btnReviewPrev?.addEventListener('click', goReviewPrev);
+  el.btnReviewNext?.addEventListener('click', goReviewNext);
+  el.btnSuccessReview?.addEventListener('click', openReviewExperience);
 
   el.formEl?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -786,35 +579,13 @@
     if (consent && !consent.checked) return;
     const payload = Object.fromEntries(new FormData(el.formEl).entries());
     window.console.log('Lead form payload', payload);
-    alert('Заявка отправлена. Данные формы записаны в консоль браузера для проверки прототипа.');
     el.formEl?.reset();
-    showScreen(el.intro);
-    index = 0;
-    score = 0;
-  });
-
-  el.stage?.addEventListener('transitionend', (event) => {
-    if (event.target !== el.stage || event.propertyName !== 'height') return;
-    el.stage.classList.remove('quiz-stage--animating');
+    openSuccessExperience();
   });
 
   bindSwipe();
-  queueStageHeightSync();
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (!canUseDesktopStageExpansion()) return;
-      queueStageHeightSync();
-    },
-    { passive: true }
-  );
-  window.addEventListener('resize', queueStageHeightSync, { passive: true });
-  window.addEventListener('load', queueStageHeightSync);
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(queueStageHeightSync).catch(() => {});
+  setExperienceState('experience--landing');
+  if (typeof window.QUIZ_HERO_TRANSITION?.reset === 'function') {
+    window.QUIZ_HERO_TRANSITION.reset();
   }
-  el.cardImage?.addEventListener('load', () => {
-    if (cardAnimating) return;
-    queueStageHeightSync();
-  });
 })();

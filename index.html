@@ -6,309 +6,343 @@
     <title>На одном дыхании — квиз (прототип)</title>
     <link rel="stylesheet" href="css/styles.css" />
   </head>
-  <body>
-    <div class="page-bg" aria-hidden="true">
-      <div class="page-bg__sky">
+  <body class="experience experience--landing">
+    <div class="experience-stage" id="experience-stage">
+      <div class="page-bg" aria-hidden="true">
+        <div class="page-bg__sky">
+          <img
+            class="page-bg__sky-img page-bg__sky-img--top"
+            src="img/hero/sky.png"
+            alt=""
+            width="1920"
+            height="400"
+            decoding="async"
+          />
+          <img
+            class="page-bg__sky-img page-bg__sky-img--mirror"
+            src="img/hero/sky.png"
+            alt=""
+            width="1920"
+            height="400"
+            decoding="async"
+          />
+        </div>
         <img
-          class="page-bg__sky-img page-bg__sky-img--top"
-          src="img/hero/sky.png"
+          class="page-bg__grass"
+          src="img/hero/grass.png"
           alt=""
           width="1920"
-          height="400"
+          height="300"
           decoding="async"
         />
-        <img
-          class="page-bg__sky-img page-bg__sky-img--mirror"
-          src="img/hero/sky.png"
-          alt=""
-          width="1920"
-          height="400"
-          decoding="async"
-        />
-      </div>
-      <img
-        class="page-bg__grass"
-        src="img/hero/grass.png"
-        alt=""
-        width="1920"
-        height="300"
-        decoding="async"
-      />
-      <div class="page-bg__panda-slot">
-        <img
-          class="page-bg__panda"
-          src="img/hero/panda.png"
-          alt=""
-          width="800"
-          height="1200"
-          decoding="async"
-        />
-      </div>
-    </div>
-
-    <header class="hero" role="banner">
-      <div class="hero__inner">
-        <div class="hero__body">
-          <div class="hero__content">
-            <h1 class="hero__title">На одном дыхании</h1>
-            <p class="hero__subtitle">
-              Развеиваем мифы о бронхиальной астме в игровом формате.
-            </p>
-            <div class="hero__cta-row">
-              <a class="hero-cta" href="#page-content" data-scroll-target="#page-content">
-                Пройти квиз
-                <img
-                  class="hero-cta__arrow"
-                  src="img/hero/arrow.svg"
-                  width="24"
-                  height="24"
-                  alt=""
-                  decoding="async"
-                />
-              </a>
-              <div class="hero-promo" role="note" aria-label="Приз за прохождение квиза">
-                <div class="hero-promo__ticket">
-                  <img
-                    class="hero-promo__icon"
-                    src="img/hero/tickets.png"
-                    alt=""
-                    decoding="async"
-                  />
-                  <p class="hero-promo__text">
-                    <span class="hero-promo__muted">Пройди квиз и выиграй</span><br />
-                    <span class="hero-promo__muted">Билеты в </span
-                    ><span class="hero-promo__brand">ПандаПарк</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="page-bg__panda-slot">
+          <img
+            class="page-bg__panda"
+            src="img/hero/panda.png"
+            alt=""
+            width="800"
+            height="1200"
+            decoding="async"
+          />
         </div>
       </div>
-    </header>
 
-    <div class="page-content" id="page-content">
-      <div class="page-content__inner" id="page-content-inner">
-    <main class="page-main">
-      <div id="quiz-stage" class="quiz-stage">
-      <!-- Старт: та же сетка, что у квиза; без карточки — только зарезервированное место -->
-      <section
-        id="screen-intro"
-        class="screen screen--quiz-layout"
-        aria-label="Начало квиза"
-      >
-        <div class="quiz-top quiz-top--intro">
-          <p class="screen-intro-count">14 вопросов</p>
-        </div>
-        <div class="quiz-card-area quiz-card-area--intro">
-          <div class="screen-intro__body">
-            <div class="actions screen-intro__actions">
-              <button type="button" class="btn-primary" id="btn-start">
-                Начать квиз
-              </button>
-            </div>
-            <p class="subtitle screen-intro-lead">
-              Свайпайте карточки или пользуйтесь кнопками «Миф» / «Правда».
-            </p>
-          </div>
-        </div>
-        <div class="quiz-bottom quiz-bottom--intro">
-          <p class="swipe-hint swipe-hint--invisible" aria-hidden="true">
-            &nbsp;
-          </p>
-        </div>
-      </section>
-
-      <!-- Квиз -->
-      <section
-        id="screen-quiz"
-        class="screen screen--quiz"
-        hidden
-        aria-live="polite"
-      >
-        <div class="quiz-top">
-          <span id="quiz-progress">Вопрос 1 из 14</span>
-        </div>
-        <div class="quiz-card-area">
-          <div class="card-wrap">
-            <div class="quiz-card-stack">
-              <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
-                <div id="feedback-card" class="quiz-card quiz-card--feedback">
-                  <p class="feedback-head" id="feedback-title"></p>
-                  <p id="feedback-explanation"></p>
-                  <div class="sources-block">
-                    <p class="sources-heading">Источники и ссылки</p>
-                    <div id="feedback-sources" class="sources-tags"></div>
+        <header class="hero" role="banner">
+          <div class="hero__inner">
+            <div class="hero__body">
+              <div class="hero__content">
+                <h1 class="hero__title">На одном дыхании</h1>
+                <p class="hero__subtitle">
+                  Развеиваем мифы о бронхиальной астме в игровом формате.
+                </p>
+                <div class="hero__cta-row">
+                  <a class="hero-cta" href="#page-content" data-scroll-target="#page-content">
+                    Пройти квиз
+                    <img
+                      class="hero-cta__arrow"
+                      src="img/hero/arrow.svg"
+                      width="24"
+                      height="24"
+                      alt=""
+                      decoding="async"
+                    />
+                  </a>
+                  <div class="hero-promo" role="note" aria-label="Приз за прохождение квиза">
+                    <div class="hero-promo__ticket">
+                      <img
+                        class="hero-promo__icon"
+                        src="img/hero/tickets.png"
+                        alt=""
+                        decoding="async"
+                      />
+                      <p class="hero-promo__text">
+                        <span class="hero-promo__muted">Пройди квиз и выиграй</span><br />
+                        <span class="hero-promo__muted">Билеты в </span
+                        ><span class="hero-promo__brand">ПандаПарк</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div id="quiz-card">
-                <div class="card-question-media-frame">
-                  <img
-                    id="card-question-media"
-                    src="img/banners/banner.png"
-                    width="1600"
-                    height="900"
-                    alt=""
-                    decoding="async"
-                  />
-                </div>
-                <p id="card-question-text"></p>
-              </div>
             </div>
           </div>
+        </header>
+
+        <div class="page-content" id="page-content">
+          <div class="page-content__inner" id="page-content-inner">
+            <main class="page-main">
+              <div id="quiz-stage" class="quiz-stage">
+                <!-- Старт: та же сетка, что у квиза; без карточки — только зарезервированное место -->
+                <section
+                  id="screen-intro"
+                  class="screen screen--quiz-layout"
+                  aria-label="Начало квиза"
+                  hidden
+                >
+                  <div class="quiz-top quiz-top--intro">
+                    <p class="screen-intro-count">14 вопросов</p>
+                  </div>
+                  <div class="quiz-card-area quiz-card-area--intro">
+                    <div class="screen-intro__body">
+                      <div class="actions screen-intro__actions">
+                        <button type="button" class="btn-primary" id="btn-start">
+                          Начать квиз
+                        </button>
+                      </div>
+                      <p class="subtitle screen-intro-lead">
+                        Свайпайте карточки или пользуйтесь кнопками «Миф» / «Правда».
+                      </p>
+                    </div>
+                  </div>
+                  <div class="quiz-bottom quiz-bottom--intro">
+                    <p class="swipe-hint swipe-hint--invisible" aria-hidden="true">
+                      &nbsp;
+                    </p>
+                  </div>
+                </section>
+
+                <!-- Квиз -->
+                <section
+                  id="screen-quiz"
+                  class="screen screen--quiz"
+                  hidden
+                  aria-live="polite"
+                >
+                  <div class="quiz-top">
+                    <div class="quiz-top__row">
+                      <span id="quiz-progress">Вопрос 1 из 14</span>
+                      <button type="button" class="btn-secondary quiz-top__restart" id="btn-quiz-restart">
+                        Пройти квиз ещё раз
+                      </button>
+                    </div>
+                  </div>
+                  <div class="quiz-card-area">
+                    <div class="card-wrap">
+                      <div class="quiz-card-stack">
+                        <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
+                          <div id="feedback-card" class="quiz-card quiz-card--feedback">
+                            <p class="feedback-head" id="feedback-title"></p>
+                            <p id="feedback-explanation"></p>
+                            <div class="sources-block">
+                              <p class="sources-heading">Источники и ссылки</p>
+                              <div id="feedback-sources" class="sources-tags"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div id="quiz-card">
+                          <div class="card-question-media-frame">
+                            <img
+                              id="card-question-media"
+                              src="img/banners/banner.png"
+                              width="1600"
+                              height="900"
+                              alt=""
+                              decoding="async"
+                            />
+                          </div>
+                          <p id="card-question-text"></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="quiz-bottom">
+                    <div class="quiz-buttons quiz-buttons--main quiz-actions-stack">
+                      <div class="quiz-actions-row" id="quiz-answer-actions">
+                        <button type="button" class="btn-myth" id="btn-myth">Миф</button>
+                        <button type="button" class="btn-truth" id="btn-truth">Правда</button>
+                      </div>
+                      <div
+                        class="quiz-actions-row quiz-actions-row--next"
+                        id="quiz-next-actions"
+                        aria-hidden="true"
+                      >
+                        <button type="button" class="btn-primary" id="btn-feedback-next">
+                          Далее
+                        </button>
+                      </div>
+                      <div
+                        class="quiz-actions-row quiz-actions-row--review"
+                        id="quiz-review-actions"
+                        aria-hidden="true"
+                      >
+                        <button type="button" class="btn-secondary" id="btn-review-prev">
+                          Назад
+                        </button>
+                        <button type="button" class="btn-secondary" id="btn-review-next">
+                          Далее
+                        </button>
+                      </div>
+                    </div>
+                    <p class="swipe-hint" id="quiz-swipe-hint">
+                      Смахните карточку или нажмите кнопку
+                    </p>
+                  </div>
+                </section>
+
+                <!-- Результат -->
+                <section id="screen-result" class="screen screen--quiz-layout" hidden>
+                  <div class="quiz-top quiz-top--result">
+                    <h1>Готово</h1>
+                  </div>
+                  <div class="quiz-card-area quiz-card-area--result">
+                    <div class="screen-result__body">
+                      <p id="result-score" class="subtitle"></p>
+                      <div id="result-tier-message"></div>
+                      <p class="subtitle screen-result__lead">
+                        Участники розыгрыша определяются на стороне организатора. Заполните
+                        форму ниже, если хотите участвовать, или перейдите к материалам на
+                        тему.
+                      </p>
+                      <form id="lead-form" class="lead-form lead-form--result">
+                        <label for="lead-name">Имя</label>
+                        <input id="lead-name" name="name" type="text" autocomplete="name" />
+
+                        <label for="lead-email">Эл. почта</label>
+                        <input
+                          id="lead-email"
+                          name="email"
+                          type="email"
+                          autocomplete="email"
+                          required
+                        />
+
+                        <label class="consent consent--form">
+                          <input type="checkbox" id="consent-form-data" required />
+                          <span
+                            >Согласен(на) с
+                            <a
+                              href="#"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="form-rules-link"
+                              >правилами участия в розыгрыше</a
+                            >
+                            и обработкой персональных данных при отправке этой формы.</span
+                          >
+                        </label>
+                      </form>
+                      <div class="result-actions">
+                        <button type="submit" class="btn-primary" id="btn-to-form" form="lead-form">
+                          Участвовать в розыгрыше
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="quiz-bottom quiz-bottom--result">
+                    <a
+                      class="result-partner"
+                      id="link-learn-more"
+                      href="https://kartazhizni.ru/ba-u-detey/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Узнать подробнее по теме на сайте Карта жизни"
+                    >
+                      <img
+                        class="result-partner__logo"
+                        src="img/partners/karta-zhizni-logo.svg"
+                        width="149"
+                        height="58"
+                        alt="Карта жизни"
+                      />
+                      <svg
+                        class="source-tag__icon result-partner__icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <polyline
+                          points="15 3 21 3 21 9"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <line
+                          x1="10"
+                          y1="14"
+                          x2="21"
+                          y2="3"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </a>
+                  </div>
+                </section>
+              </div>
+            </main>
+          </div>
         </div>
-        <div class="quiz-bottom">
-          <div class="quiz-buttons quiz-buttons--main quiz-actions-stack">
-            <div class="quiz-actions-row" id="quiz-answer-actions">
-              <button type="button" class="btn-myth" id="btn-myth">Миф</button>
-              <button type="button" class="btn-truth" id="btn-truth">Правда</button>
-            </div>
-            <div class="quiz-actions-row quiz-actions-row--next" id="quiz-next-actions" aria-hidden="true">
-              <button type="button" class="btn-primary" id="btn-feedback-next">
-                Далее
+      <section id="screen-success" class="success-screen" aria-live="polite">
+        <div class="success-screen__inner">
+          <div class="success-screen__content">
+            <p class="success-screen__eyebrow">Заявка отправлена</p>
+            <h2 class="success-screen__title">Результаты успешно отправлены</h2>
+            <p class="success-screen__text">
+              Спасибо за участие. Можно вернуться к вопросам и пролистать их как слайды с
+              правильными ответами, либо ознакомиться с условиями розыгрыша подробнее.
+            </p>
+            <div class="success-screen__actions">
+              <button type="button" class="btn-primary" id="btn-success-review">
+                Вернуться к вопросам
               </button>
             </div>
-          </div>
-          <p class="swipe-hint" id="quiz-swipe-hint">Смахните карточку или нажмите кнопку</p>
-        </div>
-      </section>
-
-      <!-- Результат -->
-      <section id="screen-result" class="screen screen--quiz-layout" hidden>
-        <div class="quiz-top quiz-top--result">
-          <h1>Готово</h1>
-        </div>
-        <div class="quiz-card-area quiz-card-area--result">
-          <div class="screen-result__body">
-            <p id="result-score" class="subtitle"></p>
-            <div id="result-tier-message"></div>
-            <p class="subtitle screen-result__lead">
-              Участники розыгрыша определяются на стороне организатора. Заполните
-              форму ниже, если хотите участвовать, или перейдите к материалам на
-              тему.
-            </p>
-            <form id="lead-form" class="lead-form lead-form--result">
-              <label for="lead-name">Имя</label>
-              <input id="lead-name" name="name" type="text" autocomplete="name" />
-
-              <label for="lead-email">Эл. почта</label>
-              <input
-                id="lead-email"
-                name="email"
-                type="email"
-                autocomplete="email"
-                required
-              />
-
-              <label for="lead-phone">Телефон</label>
-              <input
-                id="lead-phone"
-                name="phone"
-                type="tel"
-                autocomplete="tel"
-              />
-
-              <label class="consent consent--form">
-                <input type="checkbox" id="consent-form-data" required />
-                <span
-                  >Согласен(на) с
-                  <a
-                    href="#"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="form-rules-link"
-                    >правилами участия в розыгрыше</a
-                  >
-                  и обработкой персональных данных при отправке этой формы.</span
-                >
-              </label>
-            </form>
-          </div>
-        </div>
-        <div class="quiz-bottom quiz-bottom--result">
-          <div class="result-actions">
-            <button type="submit" class="btn-primary" id="btn-to-form" form="lead-form">
-              Участвовать в розыгрыше
-            </button>
             <a
-              class="result-partner"
-              id="link-learn-more"
-              href="https://kartazhizni.ru/ba-u-detey/"
+              class="success-screen__link"
+              href="#"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Узнать подробнее по теме на сайте Карта жизни"
             >
-              <img
-                class="result-partner__logo"
-                src="img/partners/karta-zhizni-logo.svg"
-                width="149"
-                height="58"
-                alt="Карта жизни"
-              />
-              <svg
-                class="source-tag__icon result-partner__icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <polyline
-                  points="15 3 21 3 21 9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <line
-                  x1="10"
-                  y1="14"
-                  x2="21"
-                  y2="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+              Ознакомиться с условиями розыгрыша подробнее
             </a>
           </div>
         </div>
       </section>
+    </div>
 
-      </div>
-    </main>
-      </div>
-      <footer class="site-footer" id="footer">
+    <footer class="site-footer" id="footer">
       <div class="site-footer__row">
-        <nav
-          class="site-footer__nav"
-          aria-label="Юридическая информация"
-        >
+        <nav class="site-footer__nav" aria-label="Юридическая информация">
           <!-- Подставьте URL документов, как на основном сайте -->
-          <a href="#" target="_blank" rel="noopener noreferrer"
-            >Политика конфиденциальности</a
-          >
-          <a href="#" target="_blank" rel="noopener noreferrer"
-            >Пользовательское соглашение</a
-          >
-          <a href="#" target="_blank" rel="noopener noreferrer"
-            >Правила розыгрыша</a
-          >
+          <a href="#" target="_blank" rel="noopener noreferrer">Политика конфиденциальности</a>
+          <a href="#" target="_blank" rel="noopener noreferrer">Пользовательское соглашение</a>
+          <a href="#" target="_blank" rel="noopener noreferrer">Правила розыгрыша</a>
         </nav>
         <p class="site-footer__corner" aria-hidden="true"></p>
       </div>
     </footer>
-    </div>
 
     <script src="js/questions.js"></script>
     <script src="js/parallax.js"></script>
