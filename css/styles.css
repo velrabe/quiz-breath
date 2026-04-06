@@ -2743,6 +2743,28 @@ body.experience {
 }
 
 @media (max-width: 767px) {
+  .experience--result-view .experience-stage {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .experience--result-view .experience-stage .page-content {
+    position: relative;
+    inset: auto;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .experience--result-view .experience-stage .page-content__inner,
+  .experience--result-view .experience-stage .page-main,
+  .experience--result-view .experience-stage .quiz-stage,
+  .experience--result-view .experience-stage .quiz-stage > .screen:not([hidden]) {
+    height: auto;
+    min-height: 0;
+  }
+
   .experience-stage .page-main {
     padding: 3rem 2rem;
   }
