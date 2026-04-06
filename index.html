@@ -202,7 +202,7 @@
                 <!-- Результат -->
                 <section id="screen-result" class="screen screen--quiz-layout" hidden>
                   <div class="quiz-top quiz-top--result">
-                    <h1>Готово</h1>
+                    <h1 id="result-title">Результат</h1>
                   </div>
                   <div class="quiz-card-area quiz-card-area--result">
                     <div class="screen-result__body">
@@ -216,6 +216,7 @@
                         rel="noopener noreferrer"
                         aria-label="Узнать подробнее по теме на сайте Карта жизни"
                       >
+                        <span class="result-partner__text">Узнайте подробнее о теме тут:</span>
                         <img
                           class="result-partner__logo"
                           src="img/partners/karta-zhizni-logo.svg"
@@ -258,41 +259,43 @@
                           />
                         </svg>
                       </a>
-                      <p class="subtitle screen-result__lead">
-                        Оставьте почту для участия в розыгрыше
-                      </p>
-                      <form id="lead-form" class="lead-form lead-form--result">
-                        <label for="lead-name">Имя</label>
-                        <input id="lead-name" name="name" type="text" autocomplete="name" />
+                      <div class="result-form-panel">
+                        <p class="subtitle screen-result__lead">
+                          Оставьте почту для участия в розыгрыше
+                        </p>
+                        <form id="lead-form" class="lead-form lead-form--result">
+                          <label for="lead-name">Имя</label>
+                          <input id="lead-name" name="name" type="text" autocomplete="name" />
 
-                        <label for="lead-email">Эл. почта</label>
-                        <input
-                          id="lead-email"
-                          name="email"
-                          type="email"
-                          autocomplete="email"
-                          required
-                        />
+                          <label for="lead-email">Эл. почта</label>
+                          <input
+                            id="lead-email"
+                            name="email"
+                            type="email"
+                            autocomplete="email"
+                            required
+                          />
 
-                        <label class="consent consent--form">
-                          <input type="checkbox" id="consent-form-data" required />
-                          <span
-                            >Согласен(на) с
-                            <a
-                              href="#"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              class="form-rules-link"
-                              >правилами участия в розыгрыше</a
+                          <label class="consent consent--form">
+                            <input type="checkbox" id="consent-form-data" required />
+                            <span
+                              >Согласен(на) с
+                              <a
+                                href="#"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="form-rules-link"
+                                >правилами участия в розыгрыше</a
+                              >
+                              и обработкой персональных данных при отправке этой формы.</span
                             >
-                            и обработкой персональных данных при отправке этой формы.</span
-                          >
-                        </label>
-                      </form>
-                      <div class="result-actions">
-                        <button type="submit" class="btn-primary" id="btn-to-form" form="lead-form">
-                          Участвовать в розыгрыше
-                        </button>
+                          </label>
+                        </form>
+                        <div class="result-actions">
+                          <button type="submit" class="btn-primary" id="btn-to-form" form="lead-form">
+                            Участвовать в розыгрыше
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

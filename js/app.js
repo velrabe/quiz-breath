@@ -39,6 +39,7 @@
 
     resultTier: document.getElementById('result-tier-message'),
     resultScore: document.getElementById('result-score'),
+    resultTitle: document.getElementById('result-title'),
 
     formEl: document.getElementById('lead-form'),
   };
@@ -57,12 +58,15 @@
   const FLY_OUT_MS = 400;
   const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
   const REVIEW_QUIZ_HINT = 'Смахните карточку или используйте кнопки для перехода между ответами';
+  const QUESTION_IMAGE_PRELOAD_AHEAD = 3;
   const EXPERIENCE_STATES = [
     'experience--landing',
     'experience--transitioning',
     'experience--quiz-active',
     'experience--success-active',
   ];
+  const preloadedQuestionImages = new Map();
+  let pendingCardImageToken = '';
 
   function createLinkOutIcon() {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -136,11 +140,15 @@
     [el.intro, el.quiz, el.result].forEach((s) => {
       if (s) s.hidden = s !== screen;
     });
+    if (el.body) {
+      el.body.classList.toggle('experience--result-view', screen === el.result);
+    }
   }
 
   function tierCopy(correctCount) {
     if (correctCount < 5) {
       return {
+        tone: 'warm',
         title: 'Есть куда расти',
         body:
           'Мифов про астму много — это нормально. Соберите информацию у педиатра или пульмонолога и загляните в материалы на тему: так проще ориентироваться в симптомах и терапии.',
@@ -148,12 +156,14 @@
     }
     if (correctCount <= 10) {
       return {
+        tone: 'mid',
         title: 'Хороший уровень',
         body:
           'Вы уже отделяете часть мифов от фактов. Закрепите знания: обсудите с врачом триггеры, план действий при обострении и почему важна регулярная терапия, а не только «по симптомам».',
       };
     }
     return {
+      tone: 'strong',
       title: 'Отличный результат',
       body:
         'Вы хорошо ориентируетесь в основах. Поделитесь квизом с близкими и при необходимости углубитесь в материалы — спокойный, информированный подход помогает детям с астмой жить активно.',
@@ -205,13 +215,102 @@
     el.feedbackCard.classList.remove('feedback--correct', 'feedback--incorrect');
   }
 
+  function getQuestionImageSrc(q) {
+    return (
+      q.image || (q && typeof q.id !== 'undefined' ? `img/quiz/${q.id}.png` : DEFAULT_QUESTION_IMAGE)
+    );
+  }
+
+  function preloadImage(src) {
+    if (!src) return Promise.resolve();
+
+    const cached = preloadedQuestionImages.get(src);
+    if (cached) return cached.promise;
+
+    let resolveDone;
+    const img = new Image();
+    const entry = {
+      img,
+      loaded: false,
+      promise: new Promise((resolve) => {
+        resolveDone = resolve;
+      }),
+    };
+
+    const finish = () => {
+      if (entry.loaded) return;
+      entry.loaded = true;
+      resolveDone();
+    };
+
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.onload = finish;
+    img.onerror = finish;
+    preloadedQuestionImages.set(src, entry);
+    img.src = src;
+
+    if (typeof img.decode === 'function') {
+      img.decode().then(finish).catch(() => {});
+    }
+
+    if (img.complete) finish();
+
+    return entry.promise;
+  }
+
+  function warmQuestionImages(fromIndex, count) {
+    const safeFrom = Math.max(0, fromIndex || 0);
+    const safeCount = Math.max(0, count || 0);
+
+    for (let i = safeFrom; i < Math.min(TOTAL, safeFrom + safeCount); i += 1) {
+      preloadImage(getQuestionImageSrc(questions[i]));
+    }
+  }
+
+  function scheduleRemainingQuestionImageWarmup() {
+    const warmRest = () => {
+      warmQuestionImages(QUESTION_IMAGE_PRELOAD_AHEAD, TOTAL);
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(warmRest, { timeout: 1500 });
+      return;
+    }
+
+    window.setTimeout(warmRest, 500);
+  }
+
   function renderQuestionMedia(q) {
-    const imageSrc =
-      q.image || (q && typeof q.id !== 'undefined' ? `img/quiz/${q.id}.png` : DEFAULT_QUESTION_IMAGE);
+    const imageSrc = getQuestionImageSrc(q);
     if (!el.cardImage) return;
-    el.cardImage.src = imageSrc;
+
+    pendingCardImageToken = `${q && typeof q.id !== 'undefined' ? q.id : 'default'}:${imageSrc}`;
+    const imageToken = pendingCardImageToken;
     el.cardImage.alt = q.imageAlt || '';
-    el.cardImage.hidden = !imageSrc;
+
+    if (!imageSrc) {
+      el.cardImage.hidden = true;
+      el.cardImage.removeAttribute('src');
+      return;
+    }
+
+    const showImage = () => {
+      if (!el.cardImage || pendingCardImageToken !== imageToken) return;
+      el.cardImage.src = imageSrc;
+      el.cardImage.hidden = false;
+    };
+
+    const cached = preloadedQuestionImages.get(imageSrc);
+    if (cached && cached.loaded) {
+      showImage();
+      return;
+    }
+
+    // If the next image is still downloading, hide the previous frame
+    // instead of flashing the old question art for a moment.
+    el.cardImage.hidden = true;
+    preloadImage(imageSrc).finally(showImage);
   }
 
   function populateFeedbackSources(sources) {
@@ -235,6 +334,7 @@
   function renderQuestionCard(q) {
     if (!q) return;
     renderQuestionMedia(q);
+    warmQuestionImages(index, QUESTION_IMAGE_PRELOAD_AHEAD);
     if (el.cardText) el.cardText.textContent = q.text;
   }
 
@@ -259,7 +359,11 @@
 
   function populateResult(correctCount) {
     const tier = tierCopy(correctCount);
-    el.resultTier.innerHTML = `<h3>${tier.title}</h3><p>${tier.body}</p>`;
+    if (el.resultTitle) el.resultTitle.textContent = tier.title;
+    if (el.result) {
+      el.result.dataset.resultTone = tier.tone || 'mid';
+    }
+    el.resultTier.innerHTML = `<p>${tier.body}</p>`;
     el.resultScore.textContent = `Правильных ответов: ${correctCount} из ${TOTAL}`;
   }
 
@@ -326,6 +430,7 @@
     questionAnswered = true;
     if (correct) score += 1;
     answers[index] = { choice, correct };
+    warmQuestionImages(index + 1, QUESTION_IMAGE_PRELOAD_AHEAD);
 
     setProgress();
     populateFeedback(q, correct);
@@ -584,6 +689,8 @@
   });
 
   bindSwipe();
+  warmQuestionImages(0, QUESTION_IMAGE_PRELOAD_AHEAD);
+  scheduleRemainingQuestionImageWarmup();
   setExperienceState('experience--landing');
   if (typeof window.QUIZ_HERO_TRANSITION?.reset === 'function') {
     window.QUIZ_HERO_TRANSITION.reset();
