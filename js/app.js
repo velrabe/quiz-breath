@@ -192,7 +192,7 @@
       el.quizHint.textContent = reviewMode ? REVIEW_QUIZ_HINT : DEFAULT_QUIZ_HINT;
       el.quizHint.setAttribute(
         'aria-hidden',
-        answered && !reviewMode ? 'true' : 'false'
+        answered && !reviewMode ? 'true' : reviewMode ? 'true' : 'false'
       );
     }
     if (el.btnQuizRestart) {

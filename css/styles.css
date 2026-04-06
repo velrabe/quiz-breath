@@ -1308,6 +1308,10 @@ body.experience {
   gap: 1rem;
 }
 
+#screen-result .quiz-top--result {
+  margin-bottom: 1.5rem;
+}
+
 #screen-result .quiz-top--result h1 {
   margin-bottom: 0;
   text-align: center;
@@ -1315,6 +1319,7 @@ body.experience {
 
 #screen-result #result-score,
 #screen-result #result-tier-message,
+#screen-result .result-partner,
 #screen-result .screen-result__lead,
 #screen-result .lead-form {
   width: 100%;
@@ -1326,6 +1331,12 @@ body.experience {
 #screen-result .screen-result__lead {
   margin-top: 0;
   margin-bottom: 0;
+}
+
+#screen-result .result-partner {
+  align-self: center;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 #screen-result .lead-form {
@@ -1353,9 +1364,7 @@ body.experience {
 }
 
 #screen-result .quiz-bottom--result {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: none;
 }
 
 .screen[hidden] {
@@ -1684,7 +1693,12 @@ button:disabled {
   opacity: 0;
   pointer-events: none;
   transform: translateY(0.65rem);
-  justify-content: center;
+  justify-content: stretch;
+}
+
+.quiz-actions-row--review > button {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 #screen-quiz.quiz-screen--answered #quiz-answer-actions {
@@ -1783,7 +1797,7 @@ button:disabled {
 }
 
 #screen-quiz.quiz-screen--review #quiz-swipe-hint {
-  opacity: 1;
+  display: none;
 }
 
 @media (min-width: 768px) {
@@ -1810,12 +1824,30 @@ button:disabled {
 }
 
 @media (max-width: 767px) {
-  #screen-quiz.quiz-screen--review #card-question-text {
-    font-size: 1.2rem;
+  #screen-quiz.quiz-screen--review .quiz-card-stack {
+    gap: 0.85rem;
+  }
+
+  #screen-quiz.quiz-screen--review #quiz-card {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
   }
 
   #screen-quiz.quiz-screen--review .card-question-media-frame {
-    aspect-ratio: 2 / 1;
+    width: 4.5rem;
+    height: 4.5rem;
+    aspect-ratio: 1 / 1;
+    border-radius: 0.75rem;
+  }
+
+  #screen-quiz.quiz-screen--review #card-question-text {
+    font-size: 1.1rem;
+    line-height: 1.15;
+    text-align: left;
+    letter-spacing: 0.02em;
   }
 
   #screen-quiz.quiz-screen--review #feedback-card #feedback-explanation {
