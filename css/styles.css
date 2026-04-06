@@ -2039,6 +2039,14 @@ button:disabled {
   #btn-to-form {
     font-size: 2rem;
   }
+
+  #screen-result #result-score {
+    max-width: none;
+  }
+
+  .site-footer {
+    font-size: 1.5rem;
+  }
 }
 
 .result-partner {
