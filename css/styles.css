@@ -1352,13 +1352,13 @@ body.experience {
 
 #screen-result #result-score {
   margin: 0;
-  font-family: var(--font);
+  font-family: var(--font-display);
   font-size: clamp(1rem, 2.2vw, 1.25rem);
-  font-weight: 600;
+  font-weight: normal;
   line-height: 1.25;
   text-align: center;
   color: var(--muted);
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
 }
 
 #screen-result[data-result-tone='warm'] .quiz-top--result h1 {
@@ -1995,12 +1995,12 @@ button:disabled {
   justify-content: center;
   flex-shrink: 0;
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: normal;
   line-height: 1;
   letter-spacing: 0.02em;
-  border-radius: 1.5rem;
-  padding: 1.625rem 3.5rem;
+  border-radius: 1rem;
+  padding: 1.625rem 1.5rem;
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
@@ -2037,7 +2037,7 @@ button:disabled {
 
 @media (min-width: 768px) {
   #btn-to-form {
-    font-size: 2.15rem;
+    font-size: 2rem;
   }
 }
 
