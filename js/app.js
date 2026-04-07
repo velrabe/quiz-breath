@@ -21,6 +21,7 @@
     btnSuccessReview: document.getElementById('btn-success-review'),
 
     card: document.getElementById('quiz-card'),
+    quizCardArea: document.querySelector('#screen-quiz .quiz-card-area'),
     cardImage: document.getElementById('card-question-media'),
     cardText: document.getElementById('card-question-text'),
     progress: document.getElementById('quiz-progress'),
@@ -74,6 +75,7 @@
   const RUNNER_JUMP_HEIGHT_RATIO = 0.48;
   const RUNNER_STONE_VISIBLE_WIDTH_RATIO = 0.3;
   const INLINE_NOTE_HOVER_CLOSE_DELAY = 300;
+  const MOBILE_LAYOUT_MAX_WIDTH = 767;
   const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
   const REVIEW_QUIZ_HINT = 'Смахните карточку или используйте кнопки для перехода между ответами';
   const SHORT_WORD_NBSP_RE =
@@ -203,6 +205,30 @@
       el.body.classList.toggle('experience--result-view', screen === el.result);
       el.body.classList.toggle('quiz-screen-active', screen === el.quiz);
     }
+    requestQuizCardOverflowHintSync();
+  }
+
+  function isMobileQuizLayout() {
+    return window.innerWidth <= MOBILE_LAYOUT_MAX_WIDTH;
+  }
+
+  function syncQuizCardOverflowHint() {
+    const cardArea = el.quizCardArea;
+    if (!cardArea) return;
+    const isQuizVisible = Boolean(el.quiz && !el.quiz.hidden);
+    if (!isQuizVisible || !isMobileQuizLayout()) {
+      cardArea.classList.remove('quiz-card-area--overflowing', 'quiz-card-area--overflow-end');
+      return;
+    }
+    const overflowGap = cardArea.scrollHeight - cardArea.clientHeight;
+    const overflowing = overflowGap > 4;
+    const scrolledToEnd = cardArea.scrollTop + cardArea.clientHeight >= cardArea.scrollHeight - 4;
+    cardArea.classList.toggle('quiz-card-area--overflowing', overflowing);
+    cardArea.classList.toggle('quiz-card-area--overflow-end', !overflowing || scrolledToEnd);
+  }
+
+  function requestQuizCardOverflowHintSync() {
+    window.requestAnimationFrame(syncQuizCardOverflowHint);
   }
 
   function tierCopy(correctCount) {
@@ -521,6 +547,7 @@
     if (el.btnQuizRestart) {
       el.btnQuizRestart.hidden = !reviewMode;
     }
+    requestQuizCardOverflowHintSync();
   }
 
   function resetFeedbackCardState() {
@@ -863,8 +890,12 @@
     el.card.style.transform = '';
     el.card.style.opacity = '1';
     cardOffsetX = 0;
+    if (el.quizCardArea) {
+      el.quizCardArea.scrollTop = 0;
+    }
     setProgress();
     paintRunnerPosition(true);
+    requestQuizCardOverflowHintSync();
   }
 
   function renderReviewCard() {
@@ -889,6 +920,9 @@
     el.card.style.transform = '';
     el.card.style.opacity = '1';
     cardOffsetX = 0;
+    if (el.quizCardArea) {
+      el.quizCardArea.scrollTop = 0;
+    }
     setProgress();
     setQuizAnsweredState(true);
     if (el.btnReviewPrev) {
@@ -898,6 +932,7 @@
       el.btnReviewNext.disabled = index >= TOTAL - 1;
     }
     paintRunnerPosition(true);
+    requestQuizCardOverflowHintSync();
   }
 
   function answer(choice) {
@@ -913,6 +948,7 @@
     setProgress();
     populateFeedback(q, correct);
     setQuizAnsweredState(true);
+    requestQuizCardOverflowHintSync();
   }
 
   function finishQuiz() {
@@ -1245,10 +1281,12 @@
   });
 
   bindSwipe();
+  el.quizCardArea?.addEventListener('scroll', syncQuizCardOverflowHint, { passive: true });
   updateRunnerSegments();
   setRunnerProgress(0, true);
   window.addEventListener('resize', () => {
     paintRunnerPosition(true);
+    requestQuizCardOverflowHintSync();
   });
   warmQuestionImages(0, QUESTION_IMAGE_PRELOAD_AHEAD);
   scheduleRemainingQuestionImageWarmup();
