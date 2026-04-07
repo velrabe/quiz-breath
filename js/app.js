@@ -24,6 +24,10 @@
     cardImage: document.getElementById('card-question-media'),
     cardText: document.getElementById('card-question-text'),
     progress: document.getElementById('quiz-progress'),
+    runnerTrack: document.getElementById('quiz-runner-track'),
+    runnerStones: document.getElementById('quiz-runner-stones'),
+    runnerPanda: document.getElementById('quiz-runner-panda'),
+    runnerSprite: document.getElementById('quiz-runner-sprite'),
     quizHint: document.getElementById('quiz-swipe-hint'),
     answerActions: document.getElementById('quiz-answer-actions'),
     nextActions: document.getElementById('quiz-next-actions'),
@@ -35,6 +39,10 @@
     feedbackTitle: document.getElementById('feedback-title'),
     feedbackExplain: document.getElementById('feedback-explanation'),
     feedbackSources: document.getElementById('feedback-sources'),
+    feedbackSourcesBlock: document.querySelector('#feedback-card .sources-block'),
+    feedbackQuestionInline: document.getElementById('feedback-question-inline'),
+    feedbackQuestionMedia: document.getElementById('feedback-question-media'),
+    feedbackQuestionText: document.getElementById('feedback-question-text'),
     btnNext: document.getElementById('btn-feedback-next'),
 
     resultTier: document.getElementById('result-tier-message'),
@@ -56,8 +64,19 @@
   let reviewMode = false;
   let answers = [];
   const FLY_OUT_MS = 400;
+  const RUNNER_MOVE_MS = 980;
+  const RUNNER_SPRITE_COLS = 5;
+  const RUNNER_SPRITE_ROWS = 2;
+  const RUNNER_IDLE_FRAME = 1;
+  const RUNNER_WALK_IN_FRAMES = [2, 3, 4, 5, 6];
+  const RUNNER_WALK_LOOP_FRAMES = [4, 3, 4, 5, 6];
+  const RUNNER_JUMP_FRAMES = [2, 7, 8, 8, 8, 9, 2];
+  const RUNNER_JUMP_HEIGHT_RATIO = 1 / 3;
+  const INLINE_NOTE_HOVER_CLOSE_DELAY = 300;
   const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
   const REVIEW_QUIZ_HINT = 'Смахните карточку или используйте кнопки для перехода между ответами';
+  const SHORT_WORD_NBSP_RE =
+    /(^|[\s([«„“"'])((?:[A-Za-zА-Яа-яЁё]{1,3}))\s+(?=[A-Za-zА-Яа-яЁё0-9])/gu;
   const QUESTION_IMAGE_PRELOAD_AHEAD = 3;
   const EXPERIENCE_STATES = [
     'experience--landing',
@@ -66,38 +85,77 @@
     'experience--success-active',
   ];
   const preloadedQuestionImages = new Map();
+  const hoverPopoverMql =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(hover: hover) and (pointer: fine)')
+      : null;
+  const reduceMotionMql =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
   let pendingCardImageToken = '';
+  let pendingFeedbackImageToken = '';
+  let runnerCompleted = 0;
+  let runnerVisualRatio = 0;
+  let runnerAnimRafId = 0;
+  let runnerAnimToken = 0;
+  let inlineNoteSeed = 0;
+  const inlineNoteStore = new Map();
+  let inlineNotePopoverEl = null;
+  let inlineNoteAnchorEl = null;
+  let inlineNoteCloseTimerId = 0;
 
-  function createLinkOutIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'source-tag__icon');
-    svg.setAttribute('width', '16');
-    svg.setAttribute('height', '16');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    svg.setAttribute('aria-hidden', 'true');
-    const stroke = {
-      stroke: 'currentColor',
-      'stroke-width': '2',
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round',
-    };
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6');
-    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    poly.setAttribute('points', '15 3 21 3 21 9');
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '10');
-    line.setAttribute('y1', '14');
-    line.setAttribute('x2', '21');
-    line.setAttribute('y2', '3');
-    [path, poly, line].forEach((n) => {
-      Object.entries(stroke).forEach(([k, v]) => n.setAttribute(k, v));
-      svg.appendChild(n);
-    });
-    return svg;
+  function isDesktopHoverInput() {
+    return Boolean(hoverPopoverMql && hoverPopoverMql.matches);
   }
+
+  function clearInlineNoteCloseTimer() {
+    if (!inlineNoteCloseTimerId) return;
+    window.clearTimeout(inlineNoteCloseTimerId);
+    inlineNoteCloseTimerId = 0;
+  }
+
+  function scheduleInlineNoteClose(delayMs = INLINE_NOTE_HOVER_CLOSE_DELAY) {
+    clearInlineNoteCloseTimer();
+    inlineNoteCloseTimerId = window.setTimeout(() => {
+      inlineNoteCloseTimerId = 0;
+      closeInlineNotePopover();
+    }, delayMs);
+  }
+
+  function getInlineNoteFromTrigger(trigger) {
+    if (!trigger) return null;
+    const key = trigger.getAttribute('data-inline-note-key') || '';
+    if (!key) return null;
+    return inlineNoteStore.get(key) || null;
+  }
+
+  function bindShortWords(text) {
+    if (text === null || typeof text === 'undefined') return '';
+    return String(text).replace(SHORT_WORD_NBSP_RE, (_, lead, word) => `${lead}${word}\u00A0`);
+  }
+
+  function applyNbspInTree(root) {
+    if (!root) return;
+    const skipTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'OPTION']);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let node = walker.nextNode();
+    while (node) {
+      const parent = node.parentElement;
+      if (parent && !skipTags.has(parent.tagName) && node.nodeValue && node.nodeValue.trim()) {
+        nodes.push(node);
+      }
+      node = walker.nextNode();
+    }
+    nodes.forEach((textNode) => {
+      const updated = bindShortWords(textNode.nodeValue);
+      if (updated !== textNode.nodeValue) {
+        textNode.nodeValue = updated;
+      }
+    });
+  }
+
   /** полный красный/зелёный при смещении ~в таком количестве px */
   const CARD_TINT_MAX = 140;
 
@@ -142,6 +200,7 @@
     });
     if (el.body) {
       el.body.classList.toggle('experience--result-view', screen === el.result);
+      el.body.classList.toggle('quiz-screen-active', screen === el.quiz);
     }
   }
 
@@ -171,14 +230,214 @@
   }
 
   function setProgress() {
-    const value = `Вопрос ${Math.min(index + 1, TOTAL)} из ${TOTAL}`;
+    const value = bindShortWords(`Вопрос ${Math.min(index + 1, TOTAL)} из ${TOTAL}`);
     if (el.progress) el.progress.textContent = value;
+  }
+
+  function updateRunnerSegments() {
+    if (!el.runnerTrack) return;
+    el.runnerTrack.style.setProperty('--quiz-runner-steps', String(Math.max(TOTAL, 1)));
+    if (!el.runnerStones) return;
+
+    const stonesCount = Math.max(TOTAL, 1);
+    if (el.runnerStones.childElementCount === stonesCount) return;
+
+    el.runnerStones.textContent = '';
+    const frag = document.createDocumentFragment();
+    for (let i = 1; i <= stonesCount; i += 1) {
+      const stone = document.createElement('span');
+      stone.className = 'quiz-runner__stone';
+      stone.style.setProperty('--stone-index', String(i));
+      frag.appendChild(stone);
+    }
+    el.runnerStones.appendChild(frag);
+  }
+
+  function isRunnerReducedMotion() {
+    return Boolean(reduceMotionMql && reduceMotionMql.matches);
+  }
+
+  function clampRunnerRatio(value) {
+    return Math.min(1, Math.max(0, Number(value) || 0));
+  }
+
+  function getRunnerTravelPx() {
+    if (!el.runnerTrack || !el.runnerPanda) return 0;
+    return Math.max(0, el.runnerTrack.clientWidth - el.runnerPanda.clientWidth);
+  }
+
+  function setRunnerSpriteFrame(frameNumber) {
+    if (!el.runnerSprite) return;
+    const maxFrame = RUNNER_SPRITE_COLS * RUNNER_SPRITE_ROWS;
+    const normalized = Math.min(maxFrame, Math.max(1, Math.round(Number(frameNumber) || 1)));
+    const index = normalized - 1;
+    const col = index % RUNNER_SPRITE_COLS;
+    const row = Math.floor(index / RUNNER_SPRITE_COLS);
+    const x =
+      RUNNER_SPRITE_COLS > 1 ? (col / (RUNNER_SPRITE_COLS - 1)) * 100 : 0;
+    const y =
+      RUNNER_SPRITE_ROWS > 1 ? (row / (RUNNER_SPRITE_ROWS - 1)) * 100 : 0;
+    el.runnerSprite.style.backgroundPosition = `${x}% ${y}%`;
+  }
+
+  function applyRunnerTransform(ratio, jumpYPx) {
+    if (!el.runnerPanda) return;
+    const x = Math.round(getRunnerTravelPx() * clampRunnerRatio(ratio));
+    const y = Math.round(Number(jumpYPx) || 0);
+    el.runnerPanda.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }
+
+  function stopRunnerAnimation() {
+    if (runnerAnimRafId) {
+      window.cancelAnimationFrame(runnerAnimRafId);
+      runnerAnimRafId = 0;
+    }
+    runnerAnimToken += 1;
+  }
+
+  function easeInOutCubic(t) {
+    const x = clampRunnerRatio(t);
+    if (x < 0.5) return 4 * x * x * x;
+    return 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+
+  function frameFromSequence(sequence, progress) {
+    if (!Array.isArray(sequence) || !sequence.length) return RUNNER_IDLE_FRAME;
+    const p = Math.min(0.999, Math.max(0, Number(progress) || 0));
+    const i = Math.floor(p * sequence.length);
+    return sequence[Math.min(sequence.length - 1, Math.max(0, i))];
+  }
+
+  function computeJumpOffset(localProgress, jumpHeight) {
+    const local = clampRunnerRatio(localProgress);
+    const apexStart = 0.42;
+    const apexEnd = 0.6;
+
+    if (local <= apexStart) {
+      const rise = local / apexStart;
+      return -jumpHeight * Math.sin((Math.PI / 2) * rise);
+    }
+    if (local <= apexEnd) {
+      return -jumpHeight;
+    }
+    const fall = (local - apexEnd) / (1 - apexEnd);
+    return -jumpHeight * Math.cos((Math.PI / 2) * fall);
+  }
+
+  function runnerMoveProgress(t, walkInEnd, jumpEnd, walkOutEnd) {
+    const x = clampRunnerRatio(t);
+    if (x < walkInEnd) {
+      const local = x / walkInEnd;
+      return 0.42 * easeInOutCubic(local);
+    }
+    if (x < jumpEnd) {
+      const local = (x - walkInEnd) / (jumpEnd - walkInEnd);
+      return 0.42 + 0.34 * easeInOutCubic(local);
+    }
+    if (x < walkOutEnd) {
+      const local = (x - jumpEnd) / (walkOutEnd - jumpEnd);
+      return 0.76 + 0.21 * easeInOutCubic(local);
+    }
+    const local = (x - walkOutEnd) / (1 - walkOutEnd);
+    return 0.97 + 0.03 * easeInOutCubic(local);
+  }
+
+  function paintRunnerPosition(immediate) {
+    if (!el.runnerPanda || !el.runnerSprite) return;
+    if (immediate) {
+      stopRunnerAnimation();
+    }
+    const ratio = TOTAL > 0 ? clampRunnerRatio(runnerCompleted / TOTAL) : 0;
+    runnerVisualRatio = ratio;
+    applyRunnerTransform(ratio, 0);
+    setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+  }
+
+  function setRunnerProgress(completedCount, immediate) {
+    runnerCompleted = Math.min(Math.max(completedCount, 0), TOTAL);
+    paintRunnerPosition(Boolean(immediate));
+  }
+
+  function runRunnerTo(completedCount) {
+    const targetCompleted = Math.min(Math.max(completedCount, 0), TOTAL);
+    const targetRatio = TOTAL > 0 ? clampRunnerRatio(targetCompleted / TOTAL) : 0;
+    const startRatio = clampRunnerRatio(runnerVisualRatio);
+    runnerCompleted = targetCompleted;
+
+    if (!el.runnerPanda || !el.runnerSprite || targetRatio <= startRatio + 0.0005) {
+      runnerVisualRatio = targetRatio;
+      applyRunnerTransform(targetRatio, 0);
+      setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+      return;
+    }
+
+    if (isRunnerReducedMotion()) {
+      runnerVisualRatio = targetRatio;
+      applyRunnerTransform(targetRatio, 0);
+      setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+      return;
+    }
+
+    stopRunnerAnimation();
+
+    const walkInEnd = 0.24;
+    const jumpEnd = 0.62;
+    const walkOutEnd = 0.92;
+    const jumpHeight = Math.max(
+      8,
+      Math.round((el.runnerPanda.clientHeight || 0) * RUNNER_JUMP_HEIGHT_RATIO)
+    );
+    const startedAt = performance.now();
+    const token = runnerAnimToken;
+
+    const tick = (now) => {
+      if (token !== runnerAnimToken) return;
+
+      const elapsed = now - startedAt;
+      const t = clampRunnerRatio(elapsed / RUNNER_MOVE_MS);
+      const moveT = runnerMoveProgress(t, walkInEnd, jumpEnd, walkOutEnd);
+      const ratio = startRatio + (targetRatio - startRatio) * moveT;
+
+      let frame = RUNNER_IDLE_FRAME;
+      let jumpY = 0;
+
+      if (t < walkInEnd) {
+        const local = t / walkInEnd;
+        frame = frameFromSequence(RUNNER_WALK_IN_FRAMES, local);
+      } else if (t < jumpEnd) {
+        const local = (t - walkInEnd) / (jumpEnd - walkInEnd);
+        frame = frameFromSequence(RUNNER_JUMP_FRAMES, local);
+        jumpY = computeJumpOffset(local, jumpHeight);
+      } else if (t < walkOutEnd) {
+        const local = (t - jumpEnd) / (walkOutEnd - jumpEnd);
+        frame = frameFromSequence(RUNNER_WALK_LOOP_FRAMES, local);
+      }
+
+      runnerVisualRatio = ratio;
+      applyRunnerTransform(ratio, jumpY);
+      setRunnerSpriteFrame(frame);
+
+      if (t >= 1) {
+        runnerAnimRafId = 0;
+        runnerVisualRatio = targetRatio;
+        applyRunnerTransform(targetRatio, 0);
+        setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+        return;
+      }
+
+      runnerAnimRafId = window.requestAnimationFrame(tick);
+    };
+
+    runnerAnimRafId = window.requestAnimationFrame(tick);
   }
 
   function setQuizAnsweredState(answered) {
     if (el.quiz) {
       el.quiz.classList.toggle('quiz-screen--answered', answered);
       el.quiz.classList.toggle('quiz-screen--review', reviewMode);
+      if (!answered || reviewMode) {
+        el.quiz.classList.remove('quiz-screen--answer-settled');
+      }
     }
     if (el.card) {
       el.card.style.pointerEvents = answered && !reviewMode ? 'none' : '';
@@ -199,7 +458,9 @@
       el.reviewActions.setAttribute('aria-hidden', reviewMode ? 'false' : 'true');
     }
     if (el.quizHint) {
-      el.quizHint.textContent = reviewMode ? REVIEW_QUIZ_HINT : DEFAULT_QUIZ_HINT;
+      el.quizHint.textContent = bindShortWords(
+        reviewMode ? REVIEW_QUIZ_HINT : DEFAULT_QUIZ_HINT
+      );
       el.quizHint.setAttribute(
         'aria-hidden',
         answered && !reviewMode ? 'true' : reviewMode ? 'true' : 'false'
@@ -212,7 +473,134 @@
 
   function resetFeedbackCardState() {
     if (!el.feedbackCard) return;
-    el.feedbackCard.classList.remove('feedback--correct', 'feedback--incorrect');
+    el.feedbackCard.classList.remove('feedback--myth', 'feedback--truth');
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function ensureInlineNotePopover() {
+    if (inlineNotePopoverEl) return inlineNotePopoverEl;
+    const pop = document.createElement('div');
+    pop.className = 'inline-note-popover';
+    pop.hidden = true;
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-live', 'polite');
+    pop.addEventListener('mouseenter', () => {
+      if (!isDesktopHoverInput()) return;
+      clearInlineNoteCloseTimer();
+    });
+    pop.addEventListener('mouseleave', (event) => {
+      if (!isDesktopHoverInput()) return;
+      const related = event.relatedTarget;
+      if (related instanceof Element && related.closest('.inline-note-ref')) {
+        clearInlineNoteCloseTimer();
+        return;
+      }
+      scheduleInlineNoteClose();
+    });
+    document.body.appendChild(pop);
+    inlineNotePopoverEl = pop;
+    return pop;
+  }
+
+  function closeInlineNotePopover() {
+    clearInlineNoteCloseTimer();
+    if (!inlineNotePopoverEl) return;
+    inlineNotePopoverEl.hidden = true;
+    inlineNotePopoverEl.innerHTML = '';
+    if (inlineNoteAnchorEl) {
+      inlineNoteAnchorEl.setAttribute('aria-expanded', 'false');
+      inlineNoteAnchorEl = null;
+    }
+  }
+
+  function positionInlineNotePopover(anchor) {
+    if (!inlineNotePopoverEl || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const pad = 8;
+    const popRect = inlineNotePopoverEl.getBoundingClientRect();
+    let left = rect.left;
+    let top = rect.bottom + 8;
+    if (left + popRect.width > window.innerWidth - pad) {
+      left = window.innerWidth - popRect.width - pad;
+    }
+    if (left < pad) left = pad;
+    if (top + popRect.height > window.innerHeight - pad) {
+      top = rect.top - popRect.height - 8;
+    }
+    if (top < pad) top = pad;
+    inlineNotePopoverEl.style.left = `${Math.round(left)}px`;
+    inlineNotePopoverEl.style.top = `${Math.round(top)}px`;
+  }
+
+  function openInlineNotePopover(anchor, noteData) {
+    if (!anchor || !noteData) return;
+    clearInlineNoteCloseTimer();
+    const pop = ensureInlineNotePopover();
+    pop.innerHTML = '';
+
+    const text = document.createElement('p');
+    text.className = 'inline-note-popover__text';
+    text.textContent = noteData.note || '';
+    pop.appendChild(text);
+
+    if (noteData.url) {
+      const link = document.createElement('a');
+      link.className = 'inline-note-popover__link';
+      link.href = noteData.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = noteData.label || 'Открыть источник';
+      pop.appendChild(link);
+    }
+
+    if (inlineNoteAnchorEl && inlineNoteAnchorEl !== anchor) {
+      inlineNoteAnchorEl.setAttribute('aria-expanded', 'false');
+    }
+    inlineNoteAnchorEl = anchor;
+    anchor.setAttribute('aria-expanded', 'true');
+
+    pop.hidden = false;
+    positionInlineNotePopover(anchor);
+  }
+
+  function buildExplanationWithInlineNotes(explanation, sources) {
+    const sourceList = Array.isArray(sources) ? sources : [];
+    inlineNoteStore.clear();
+
+    let baseText = String(explanation || '');
+    if (!/\[\d+\]/.test(baseText) && sourceList.length) {
+      const trail = sourceList.map((_, i) => `[${i + 1}]`).join(' ');
+      baseText = `${baseText} ${trail}`;
+    }
+
+    const escaped = escapeHtml(baseText);
+    return escaped.replace(/\[(\d+)\]/g, (match, num) => {
+      const idx = Number(num) - 1;
+      const src = sourceList[idx];
+      if (!src || (!src.note && !src.url && !src.label)) return match;
+      inlineNoteSeed += 1;
+      const key = `inline-note-${inlineNoteSeed}`;
+      inlineNoteStore.set(key, {
+        note: src.note || '',
+        url: src.url || '',
+        label: src.label || 'Открыть источник',
+      });
+      return `<button type="button" class="inline-note-ref" data-inline-note-key="${key}" aria-expanded="false" aria-label="Показать сноску ${num}">[${num}]</button>`;
+    });
+  }
+
+  function setFeedbackExplanation(explanation, sources) {
+    if (!el.feedbackExplain) return;
+    el.feedbackExplain.innerHTML = buildExplanationWithInlineNotes(explanation, sources);
+    closeInlineNotePopover();
   }
 
   function getQuestionImageSrc(q) {
@@ -313,27 +701,50 @@
     preloadImage(imageSrc).finally(showImage);
   }
 
+  function renderFeedbackQuestionPreview(q) {
+    if (!q || !el.feedbackQuestionText || !el.feedbackQuestionMedia) return;
+    el.feedbackQuestionText.textContent = q.text;
+
+    const imageSrc = getQuestionImageSrc(q);
+    pendingFeedbackImageToken = `${q && typeof q.id !== 'undefined' ? q.id : 'default'}:${imageSrc}`;
+    const imageToken = pendingFeedbackImageToken;
+    el.feedbackQuestionMedia.alt = q.imageAlt || '';
+
+    if (!imageSrc) {
+      el.feedbackQuestionMedia.hidden = true;
+      el.feedbackQuestionMedia.removeAttribute('src');
+      return;
+    }
+
+    const showImage = () => {
+      if (!el.feedbackQuestionMedia || pendingFeedbackImageToken !== imageToken) return;
+      el.feedbackQuestionMedia.src = imageSrc;
+      el.feedbackQuestionMedia.hidden = false;
+    };
+
+    const cached = preloadedQuestionImages.get(imageSrc);
+    if (cached && cached.loaded) {
+      showImage();
+      return;
+    }
+
+    el.feedbackQuestionMedia.hidden = true;
+    preloadImage(imageSrc).finally(showImage);
+  }
+
   function populateFeedbackSources(sources) {
-    if (!el.feedbackSources) return;
-    el.feedbackSources.innerHTML = '';
-    (sources || []).forEach((s) => {
-      const a = document.createElement('a');
-      a.href = s.url;
-      a.className = 'source-tag';
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      const label = document.createElement('span');
-      label.className = 'source-tag__text';
-      label.textContent = s.label;
-      a.appendChild(label);
-      a.appendChild(createLinkOutIcon());
-      el.feedbackSources.appendChild(a);
-    });
+    if (el.feedbackSources) {
+      el.feedbackSources.innerHTML = '';
+    }
+    if (el.feedbackSourcesBlock) {
+      el.feedbackSourcesBlock.hidden = true;
+    }
   }
 
   function renderQuestionCard(q) {
     if (!q) return;
     renderQuestionMedia(q);
+    renderFeedbackQuestionPreview(q);
     warmQuestionImages(index, QUESTION_IMAGE_PRELOAD_AHEAD);
     if (el.cardText) el.cardText.textContent = q.text;
   }
@@ -341,18 +752,28 @@
   function primeFeedback(q) {
     if (!q) return;
     if (el.feedbackTitle) el.feedbackTitle.textContent = '';
-    if (el.feedbackExplain) el.feedbackExplain.textContent = q.explanation;
+    setFeedbackExplanation(q.explanation, q.sources);
     resetFeedbackCardState();
+    if (el.feedbackCard) {
+      el.feedbackCard.classList.add(
+        q.correct === 'myth' ? 'feedback--myth' : 'feedback--truth'
+      );
+    }
     populateFeedbackSources(q.sources);
+  }
+
+  function feedbackHeading(q, correct) {
+    const suffix = q.correct === 'myth' ? 'это миф' : 'это правда';
+    return bindShortWords(correct ? `Да, ${suffix}` : `Не совсем, ${suffix}`);
   }
 
   function populateFeedback(q, correct) {
     if (!q) return;
-    el.feedbackTitle.textContent = correct ? 'Верно' : 'Не совсем';
-    el.feedbackExplain.textContent = q.explanation;
+    el.feedbackTitle.textContent = bindShortWords(feedbackHeading(q, correct));
+    setFeedbackExplanation(q.explanation, q.sources);
     if (el.feedbackCard) {
-      el.feedbackCard.classList.toggle('feedback--correct', correct);
-      el.feedbackCard.classList.toggle('feedback--incorrect', !correct);
+      el.feedbackCard.classList.toggle('feedback--myth', q.correct === 'myth');
+      el.feedbackCard.classList.toggle('feedback--truth', q.correct === 'truth');
     }
     populateFeedbackSources(q.sources);
   }
@@ -363,8 +784,10 @@
     if (el.result) {
       el.result.dataset.resultTone = tier.tone || 'mid';
     }
-    el.resultTier.innerHTML = `<p>${tier.body}</p>`;
-    el.resultScore.textContent = `Правильных ответов: ${correctCount} из ${TOTAL}`;
+    el.resultTier.innerHTML = `<p>${bindShortWords(tier.body)}</p>`;
+    el.resultScore.textContent = bindShortWords(
+      `Правильных ответов: ${correctCount} из ${TOTAL}`
+    );
   }
 
   function renderCard() {
@@ -389,6 +812,7 @@
     el.card.style.opacity = '1';
     cardOffsetX = 0;
     setProgress();
+    paintRunnerPosition(true);
   }
 
   function renderReviewCard() {
@@ -421,6 +845,7 @@
     if (el.btnReviewNext) {
       el.btnReviewNext.disabled = index >= TOTAL - 1;
     }
+    paintRunnerPosition(true);
   }
 
   function answer(choice) {
@@ -431,6 +856,7 @@
     if (correct) score += 1;
     answers[index] = { choice, correct };
     warmQuestionImages(index + 1, QUESTION_IMAGE_PRELOAD_AHEAD);
+    runRunnerTo(index + 1);
 
     setProgress();
     populateFeedback(q, correct);
@@ -503,6 +929,17 @@
       cardFlyTimeoutId = 0;
       cardAnimating = false;
       cardOffsetX = 0;
+      if (!reviewMode && questionAnswered) {
+        el.quiz?.classList.add('quiz-screen--answer-settled');
+        if (el.cardText) {
+          el.cardText.style.color = '';
+        }
+        el.card.style.transition = 'none';
+        el.card.style.transform = '';
+        el.card.style.opacity = '1';
+        el.card.offsetWidth;
+        el.card.style.transition = '';
+      }
     }, FLY_OUT_MS);
   }
 
@@ -608,6 +1045,7 @@
     score = 0;
     answers = [];
     reviewMode = false;
+    setRunnerProgress(0, true);
     if (el.pageContent) {
       el.pageContent.scrollTop = 0;
     }
@@ -645,6 +1083,72 @@
 
   window.QUIZ_START_FROM_HERO = startQuiz;
 
+  el.feedbackExplain?.addEventListener('click', (event) => {
+    const trigger = event.target.closest('.inline-note-ref');
+    if (!trigger) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const noteData = getInlineNoteFromTrigger(trigger);
+    if (!noteData) return;
+    if (inlineNoteAnchorEl === trigger && inlineNotePopoverEl && !inlineNotePopoverEl.hidden) {
+      closeInlineNotePopover();
+      return;
+    }
+    openInlineNotePopover(trigger, noteData);
+  });
+
+  el.feedbackExplain?.addEventListener('mouseover', (event) => {
+    if (!isDesktopHoverInput()) return;
+    const trigger = event.target.closest('.inline-note-ref');
+    if (!trigger) return;
+    const related = event.relatedTarget;
+    if (related instanceof Element && trigger.contains(related)) return;
+    const noteData = getInlineNoteFromTrigger(trigger);
+    if (!noteData) return;
+    openInlineNotePopover(trigger, noteData);
+  });
+
+  el.feedbackExplain?.addEventListener('mouseout', (event) => {
+    if (!isDesktopHoverInput()) return;
+    const trigger = event.target.closest('.inline-note-ref');
+    if (!trigger) return;
+    const related = event.relatedTarget;
+    if (
+      related instanceof Element &&
+      (trigger.contains(related) || related.closest('.inline-note-popover'))
+    ) {
+      clearInlineNoteCloseTimer();
+      return;
+    }
+    scheduleInlineNoteClose();
+  });
+
+  document.addEventListener('click', (event) => {
+    if (
+      !event.target.closest('.inline-note-ref') &&
+      !event.target.closest('.inline-note-popover')
+    ) {
+      closeInlineNotePopover();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeInlineNotePopover();
+  });
+  window.addEventListener('resize', () => {
+    if (inlineNoteAnchorEl && inlineNotePopoverEl && !inlineNotePopoverEl.hidden) {
+      positionInlineNotePopover(inlineNoteAnchorEl);
+    }
+  });
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (inlineNoteAnchorEl && inlineNotePopoverEl && !inlineNotePopoverEl.hidden) {
+        closeInlineNotePopover();
+      }
+    },
+    true
+  );
+
   function openSuccessExperience() {
     if (el.pageContent) {
       el.pageContent.scrollTop = 0;
@@ -663,6 +1167,7 @@
       el.pageContent.scrollTop = 0;
     }
     index = 0;
+    setRunnerProgress(TOTAL, true);
     setExperienceState('experience--quiz-active');
     showScreen(el.quiz);
     renderReviewCard();
@@ -680,8 +1185,7 @@
 
   el.formEl?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const consent = document.getElementById('consent-form-data');
-    if (consent && !consent.checked) return;
+    if (typeof el.formEl.reportValidity === 'function' && !el.formEl.reportValidity()) return;
     const payload = Object.fromEntries(new FormData(el.formEl).entries());
     window.console.log('Lead form payload', payload);
     el.formEl?.reset();
@@ -689,8 +1193,14 @@
   });
 
   bindSwipe();
+  updateRunnerSegments();
+  setRunnerProgress(0, true);
+  window.addEventListener('resize', () => {
+    paintRunnerPosition(true);
+  });
   warmQuestionImages(0, QUESTION_IMAGE_PRELOAD_AHEAD);
   scheduleRemainingQuestionImageWarmup();
+  applyNbspInTree(document.body);
   setExperienceState('experience--landing');
   if (typeof window.QUIZ_HERO_TRANSITION?.reset === 'function') {
     window.QUIZ_HERO_TRANSITION.reset();

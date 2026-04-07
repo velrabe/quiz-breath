@@ -27,6 +27,11 @@
             decoding="async"
           />
         </div>
+        <div class="page-bg__quiz-clouds" aria-hidden="true">
+          <img class="page-bg__quiz-cloud page-bg__quiz-cloud--1" src="img/quiz/cl1.png" alt="" decoding="async" />
+          <img class="page-bg__quiz-cloud page-bg__quiz-cloud--2" src="img/quiz/cl2.png" alt="" decoding="async" />
+          <img class="page-bg__quiz-cloud page-bg__quiz-cloud--3" src="img/quiz/cl3.png" alt="" decoding="async" />
+        </div>
         <img
           class="page-bg__grass"
           src="img/hero/grass.png"
@@ -53,7 +58,7 @@
               <div class="hero__content">
                 <h1 class="hero__title">На одном дыхании</h1>
                 <p class="hero__subtitle">
-                  Развеиваем мифы о бронхиальной астме в игровом формате.
+                  От борьбы с&nbsp;частым кашлем и&nbsp;хрипами к&nbsp;активному детству
                 </p>
                 <div class="hero__cta-row">
                   <a class="hero-cta" href="#page-content" data-scroll-target="#page-content">
@@ -76,8 +81,8 @@
                         decoding="async"
                       />
                       <p class="hero-promo__text">
-                        <span class="hero-promo__muted">Пройди квиз и выиграй</span><br />
-                        <span class="hero-promo__muted">Билеты в </span
+                        <span class="hero-promo__muted">Пройди квиз и&nbsp;получи шанс</span><br />
+                        <span class="hero-promo__muted">выиграть билеты в&nbsp;</span
                         ><span class="hero-promo__brand">ПандаПарк</span>
                       </p>
                     </div>
@@ -130,7 +135,18 @@
                 >
                   <div class="quiz-top">
                     <div class="quiz-top__row">
-                      <span id="quiz-progress">Вопрос 1 из 14</span>
+                      <div class="quiz-top__progress-group">
+                        <span id="quiz-progress">Вопрос 1 из 14</span>
+                        <div class="quiz-runner" aria-hidden="true">
+                          <div class="quiz-runner__track" id="quiz-runner-track">
+                            <div class="quiz-runner__stones" id="quiz-runner-stones"></div>
+                            <div class="quiz-runner__grass"></div>
+                            <div class="quiz-runner__panda" id="quiz-runner-panda">
+                              <span class="quiz-runner__sprite" id="quiz-runner-sprite"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                       <button type="button" class="btn-secondary quiz-top__restart" id="btn-quiz-restart">
                         Пройти квиз ещё раз
                       </button>
@@ -140,6 +156,19 @@
                     <div class="card-wrap">
                       <div class="quiz-card-stack">
                         <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
+                          <div class="feedback-question-inline" id="feedback-question-inline">
+                            <div class="feedback-question-inline__media-frame">
+                              <img
+                                id="feedback-question-media"
+                                src="img/banners/banner.png"
+                                width="1600"
+                                height="900"
+                                alt=""
+                                decoding="async"
+                              />
+                            </div>
+                            <p id="feedback-question-text"></p>
+                          </div>
                           <div id="feedback-card" class="quiz-card quiz-card--feedback">
                             <p class="feedback-head" id="feedback-title"></p>
                             <p id="feedback-explanation"></p>
@@ -214,9 +243,8 @@
                         href="https://kartazhizni.ru/ba-u-detey/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label="Узнать подробнее по теме на сайте Карта жизни"
+                        aria-label="Подробнее на сайте Карта жизни"
                       >
-                        <span class="result-partner__text">Узнайте подробнее о теме тут:</span>
                         <img
                           class="result-partner__logo"
                           src="img/partners/karta-zhizni-logo.svg"
@@ -224,6 +252,8 @@
                           height="58"
                           alt="Карта жизни"
                         />
+                        <span class="result-partner__text">Подробнее тут</span>
+                        <span class="result-partner__icon-slot" aria-hidden="true">
                         <svg
                           class="source-tag__icon result-partner__icon"
                           width="16"
@@ -258,10 +288,11 @@
                             stroke-linejoin="round"
                           />
                         </svg>
+                        </span>
                       </a>
                       <div class="result-form-panel">
                         <p class="subtitle screen-result__lead">
-                          Оставьте почту для участия в розыгрыше
+                          Оставьте почту<br />для участия в розыгрыше
                         </p>
                         <form id="lead-form" class="lead-form lead-form--result">
                           <label for="lead-name">Имя</label>
@@ -276,20 +307,40 @@
                             required
                           />
 
-                          <label class="consent consent--form">
-                            <input type="checkbox" id="consent-form-data" required />
-                            <span
-                              >Согласен(на) с
-                              <a
-                                href="#"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="form-rules-link"
-                                >правилами участия в розыгрыше</a
+                          <div class="result-form-consents">
+                            <label class="consent consent--form">
+                              <input
+                                type="checkbox"
+                                id="consent-form-rules"
+                                name="consentRules"
+                                value="yes"
+                                required
+                              />
+                              <span
+                                >Согласен(на) с
+                                <a
+                                  href="#"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  class="form-rules-link"
+                                  >правилами акции</a
+                                >.</span
                               >
-                              и обработкой персональных данных при отправке этой формы.</span
-                            >
-                          </label>
+                            </label>
+                            <label class="consent consent--form">
+                              <input
+                                type="checkbox"
+                                id="consent-form-data"
+                                name="consentData"
+                                value="yes"
+                                required
+                              />
+                              <span
+                                >Согласен(на) на обработку персональных данных при отправке этой
+                                формы.</span
+                              >
+                            </label>
+                          </div>
                         </form>
                         <div class="result-actions">
                           <button type="submit" class="btn-primary" id="btn-to-form" form="lead-form">
@@ -311,36 +362,101 @@
             <p class="success-screen__eyebrow">Заявка отправлена</p>
             <h2 class="success-screen__title">Результаты успешно отправлены</h2>
             <p class="success-screen__text">
-              Спасибо за участие. Можно вернуться к вопросам и пролистать их как слайды с
-              правильными ответами, либо ознакомиться с условиями розыгрыша подробнее.
+              Теперь вы участвуете в розыгрыше, результаты будут 19 мая!<br />
+              Подробнее о бронхиальной астме тут.
             </p>
-            <div class="success-screen__actions">
-              <button type="button" class="btn-primary" id="btn-success-review">
-                Вернуться к вопросам
-              </button>
-            </div>
             <a
-              class="success-screen__link"
-              href="#"
+              class="result-partner"
+              href="https://kartazhizni.ru/ba-u-detey/"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Узнать больше о бронхиальной астме на сайте Карта жизни"
             >
-              Ознакомиться с условиями розыгрыша подробнее
+              <img
+                class="result-partner__logo"
+                src="img/partners/karta-zhizni-logo.svg"
+                width="149"
+                height="58"
+                alt="Карта жизни"
+              />
+              <span class="result-partner__text">Узнать больше</span>
+              <span class="result-partner__icon-slot" aria-hidden="true">
+              <svg
+                class="source-tag__icon result-partner__icon"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <polyline
+                  points="15 3 21 3 21 9"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <line
+                  x1="10"
+                  y1="14"
+                  x2="21"
+                  y2="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              </span>
             </a>
+            <div class="success-screen__actions">
+              <button type="button" class="success-screen__secondary-action" id="btn-success-review">
+                Вернуться к вопросам
+              </button>
+              <a
+                class="success-screen__link"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Ознакомиться с условиями розыгрыша
+              </a>
+            </div>
           </div>
         </div>
       </section>
     </div>
 
     <footer class="site-footer" id="footer">
-      <div class="site-footer__row">
-        <nav class="site-footer__nav" aria-label="Юридическая информация">
+      <div class="site-footer__inner">
+        <div class="site-footer__disclaimer" aria-label="Юридический дисклеймер">
+          <p>
+            Материал подготовлен при поддержке компании «АстраЗенека». Материал предназначен
+            для широкой аудитории. Информация, представленная в данном материале, не
+            представляет собой и не заменяет консультацию врача. Необходимо получить
+            консультацию врача.
+          </p>
+          <p>
+            ООО «АстраЗенека Фармасьютикалз». 123112, г. Москва, 1-й Красногвардейский проезд,
+            д.21, стр.1, 30 этаж. Тел.: +7 (495) 799-56-98. astrazeneca.ru.
+          </p>
+          <p>Номер одобрения: RU-x Дата одобрения: х Дата истечения: х</p>
+          <p>Реклама. Рекламодатель ООО «АСТРАЗЕНЕКА ФАРМАСЬЮТИКАЛЗ» ИНН 7704579700</p>
+        </div>
+        <nav class="site-footer__row" aria-label="Юридическая информация">
           <!-- Подставьте URL документов, как на основном сайте -->
           <a href="#" target="_blank" rel="noopener noreferrer">Политика конфиденциальности</a>
           <a href="#" target="_blank" rel="noopener noreferrer">Пользовательское соглашение</a>
           <a href="#" target="_blank" rel="noopener noreferrer">Правила розыгрыша</a>
         </nav>
-        <p class="site-footer__corner" aria-hidden="true"></p>
       </div>
     </footer>
 

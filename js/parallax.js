@@ -45,6 +45,7 @@
   var heroEl = document.querySelector('.hero');
   var heroInner = document.querySelector('.hero__inner');
   var heroCtaRow = document.querySelector('.hero__cta-row');
+  var heroPromo = document.querySelector('.hero-promo');
   var heroCta = document.querySelector('a.hero-cta[href^="#"]');
   var rootStyle = document.documentElement.style;
   var body = document.body;
@@ -73,6 +74,17 @@
     grassOpacity: '',
     pandaTransform: '',
     pandaOpacity: '',
+    heroPromoRot: null,
+    geometry: {
+      valid: false,
+      sceneHeight: 0,
+      skyW: 0,
+      skyH: 0,
+      grassW: 0,
+      grassH: 0,
+      pandaW: 0,
+      pandaH: 0,
+    },
   };
 
   function clamp01(value) {
@@ -104,23 +116,47 @@
     return a + (b - a) * t;
   }
 
-  function getSceneHeight() {
-    if (heroEl && heroEl.parentElement) {
-      var rect = heroEl.parentElement.getBoundingClientRect();
-      if (rect.height) return rect.height;
-    }
-    return window.innerHeight || 1;
+  function isPointerParallaxAllowed() {
+    return (
+      body.classList.contains('experience--landing') ||
+      body.classList.contains('experience--transitioning')
+    );
   }
 
-  function getNodeBaseSize(node, axis) {
-    if (!node) return 0;
-    var size =
-      axis === 'x'
-        ? node.offsetWidth || node.clientWidth
-        : node.offsetHeight || node.clientHeight;
-    if (size) return size;
+  function getNodeRect(node) {
+    if (!node) return { width: 0, height: 0 };
     var rect = node.getBoundingClientRect();
-    return axis === 'x' ? rect.width : rect.height;
+    return { width: rect.width || 0, height: rect.height || 0 };
+  }
+
+  function refreshGeometryCache() {
+    var sceneHeight = window.innerHeight || 1;
+    if (heroEl && heroEl.parentElement) {
+      var heroParentRect = heroEl.parentElement.getBoundingClientRect();
+      if (heroParentRect.height) sceneHeight = heroParentRect.height;
+    }
+
+    var skyRect = getNodeRect(sky);
+    var grassRect = getNodeRect(grass);
+    var pandaRect = getNodeRect(pandaSlot);
+
+    state.geometry.sceneHeight = sceneHeight;
+    state.geometry.skyW = skyRect.width;
+    state.geometry.skyH = skyRect.height;
+    state.geometry.grassW = grassRect.width;
+    state.geometry.grassH = grassRect.height;
+    state.geometry.pandaW = pandaRect.width;
+    state.geometry.pandaH = pandaRect.height;
+    state.geometry.valid = true;
+  }
+
+  function ensureGeometryCache() {
+    if (!state.geometry.valid) refreshGeometryCache();
+  }
+
+  function getSceneHeight() {
+    ensureGeometryCache();
+    return state.geometry.sceneHeight || window.innerHeight || 1;
   }
 
   function getHalfOverflow(size, scale) {
@@ -128,16 +164,12 @@
     return size * ((scale - 1) * 0.5);
   }
 
-  function getBackgroundPointerShift(node, pointerValue, axis) {
-    if (!node) return 0;
-    var size = getNodeBaseSize(node, axis);
+  function getBackgroundPointerShift(pointerValue, size) {
     var halfOverflow = getHalfOverflow(size, CONFIG.background.baseScale);
     return -pointerValue * halfOverflow;
   }
 
-  function getPointerShiftWithinScale(node, pointerValue, axis, scale, frac) {
-    if (!node) return 0;
-    var size = getNodeBaseSize(node, axis);
+  function getPointerShiftWithinScale(pointerValue, size, scale, frac) {
     var halfOverflow = getHalfOverflow(size, scale);
     return -pointerValue * Math.min(halfOverflow, size * frac);
   }
@@ -196,15 +228,38 @@
     heroCtaRow.style.transform = 'translate3d(0,' + translateY + 'px,0)';
   }
 
+  function updateHeroPromoTilt() {
+    if (!heroPromo) return;
+
+    var angle = 0;
+    if (!reduce && !isMobileViewport() && isPointerParallaxAllowed()) {
+      var diag = (state.pointerCurrentX - state.pointerCurrentY) * 0.5;
+      if (diag > 1) diag = 1;
+      if (diag < -1) diag = -1;
+      if (diag >= 0) {
+        angle = -4 * diag;
+      } else {
+        angle = 2 * -diag;
+      }
+    }
+
+    var next = angle.toFixed(3);
+    if (state.heroPromoRot === next) return;
+    state.heroPromoRot = next;
+    heroPromo.style.transform = 'rotate(' + next + 'deg)';
+  }
+
   function updateSkyGrass(progress, vh) {
+    ensureGeometryCache();
+    var geo = state.geometry;
     var motionProgress = smoothstep(progress);
     var virtualY = vh * motionProgress;
     var skyY = Math.round(virtualY * CONFIG.background.skyYPerProgressVh);
     var grassY = Math.round(virtualY * CONFIG.background.grassYPerProgressVh);
-    var skyShiftX = getBackgroundPointerShift(sky, state.pointerCurrentX, 'x');
-    var skyShiftY = getBackgroundPointerShift(sky, state.pointerCurrentY, 'y');
-    var grassShiftX = getBackgroundPointerShift(grass, state.pointerCurrentX, 'x');
-    var grassShiftY = getBackgroundPointerShift(grass, state.pointerCurrentY, 'y');
+    var skyShiftX = getBackgroundPointerShift(state.pointerCurrentX, geo.skyW);
+    var skyShiftY = getBackgroundPointerShift(state.pointerCurrentY, geo.skyH);
+    var grassShiftX = getBackgroundPointerShift(state.pointerCurrentX, geo.grassW);
+    var grassShiftY = getBackgroundPointerShift(state.pointerCurrentY, geo.grassH);
     var scaleValue = CONFIG.background.baseScale.toFixed(3);
     var grassFade = 1 - smoothstep((progress - 0.72) / 0.28);
 
@@ -248,6 +303,8 @@
 
   function updatePanda(progress, vh) {
     if (!pandaSlot) return;
+    ensureGeometryCache();
+    var geo = state.geometry;
     var cfg = getPandaConfig();
     var motionProgress = smoothstep(progress);
     var virtualY = vh * motionProgress;
@@ -259,16 +316,14 @@
     var maxTy = vh * cfg.maxTyVhMul;
     var scale = cfg.baseScale + cfg.scaleAmp * e;
     var pointerX = getPointerShiftWithinScale(
-      pandaSlot,
       state.pointerCurrentX,
-      'x',
+      geo.pandaW,
       scale,
       cfg.pointerShiftFrac
     );
     var pointerY = getPointerShiftWithinScale(
-      pandaSlot,
       state.pointerCurrentY,
-      'y',
+      geo.pandaH,
       scale,
       cfg.pointerShiftFrac
     );
@@ -304,6 +359,7 @@
     updateHeroHeight(vh);
     updateHeroInner(state.progress, vh);
     updateHeroCtaRow(state.progress, vh);
+    updateHeroPromoTilt();
     updateSkyGrass(state.progress, vh);
     updatePanda(state.progress, vh);
     return pointerMoving || state.transitionActive;
@@ -339,6 +395,8 @@
   }
 
   function resetHeroState() {
+    state.geometry.valid = false;
+    refreshGeometryCache();
     state.progress = 0;
     state.transitionActive = false;
     state.transitionStartTime = 0;
@@ -351,6 +409,8 @@
   }
 
   function startHeroTransition(options) {
+    state.geometry.valid = false;
+    refreshGeometryCache();
     if (reduce) {
       state.progress = 1;
       render();
@@ -371,6 +431,8 @@
   }
 
   function rewindHeroTransition(options) {
+    state.geometry.valid = false;
+    refreshGeometryCache();
     if (reduce) {
       state.progress = 0;
       render();
@@ -390,7 +452,7 @@
 
   if (heroInner) heroInner.style.willChange = 'transform';
   if (heroCtaRow) heroCtaRow.style.willChange = 'transform';
-  if (heroEl) heroEl.style.willChange = 'height';
+  if (heroPromo) heroPromo.style.willChange = 'transform';
   if (sky) sky.style.willChange = 'transform';
   if (grass) grass.style.willChange = 'transform, opacity';
   if (pandaSlot) pandaSlot.style.willChange = 'transform, opacity';
@@ -398,8 +460,6 @@
   if (mqlMobile) {
     if (mqlMobile.addEventListener) {
       mqlMobile.addEventListener('change', resetHeroState);
-    } else if (mqlMobile.addListener) {
-      mqlMobile.addListener(resetHeroState);
     }
   }
 
@@ -408,7 +468,7 @@
     function (e) {
       if (!e || e.pointerType === 'touch') return;
       if (isMobileViewport()) return;
-      if (body.classList.contains('experience--quiz-active')) return;
+      if (!isPointerParallaxAllowed()) return;
       var vw = window.innerWidth || 1;
       var vh = window.innerHeight || 1;
       state.pointerTargetX = clamp01(e.clientX / vw) * 2 - 1;
@@ -421,6 +481,7 @@
   window.addEventListener(
     'pointerleave',
     function () {
+      if (!isPointerParallaxAllowed()) return;
       state.pointerTargetX = 0;
       state.pointerTargetY = 0;
       scheduleFrame();
@@ -431,6 +492,7 @@
   window.addEventListener(
     'blur',
     function () {
+      if (!isPointerParallaxAllowed()) return;
       state.pointerTargetX = 0;
       state.pointerTargetY = 0;
       scheduleFrame();
@@ -438,7 +500,15 @@
     { passive: true }
   );
 
-  window.addEventListener('resize', scheduleFrame, { passive: true });
+  window.addEventListener(
+    'resize',
+    function () {
+      state.geometry.valid = false;
+      refreshGeometryCache();
+      scheduleFrame();
+    },
+    { passive: true }
+  );
 
   if (heroCta) {
     heroCta.addEventListener('click', function (e) {
