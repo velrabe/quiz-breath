@@ -3421,6 +3421,52 @@ body.experience {
     margin-bottom: 0.75rem;
   }
 
+  /* Мобильный: этапы ответа/результата растут по контенту и выравниваются к верху */
+  .experience--quiz-active .experience-stage {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .experience--quiz-active .experience-stage .page-content {
+    position: relative;
+    inset: auto;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .experience--quiz-active .experience-stage .page-content__inner,
+  .experience--quiz-active .experience-stage .page-main,
+  .experience--quiz-active .experience-stage .quiz-stage,
+  .experience--quiz-active .experience-stage .quiz-stage > .screen:not([hidden]) {
+    height: auto;
+    min-height: 0;
+  }
+
+  #screen-quiz.quiz-screen--answered {
+    grid-template-rows: auto auto auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  #screen-quiz.quiz-screen--answered .quiz-card-area {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  #screen-quiz.quiz-screen--answered .card-wrap {
+    flex: 0 0 auto;
+    align-items: flex-start;
+    min-height: 0;
+  }
+
+  #screen-quiz.quiz-screen--answered .quiz-bottom {
+    margin-top: 1rem;
+  }
+
   .experience--success-active .page-bg__grass {
     bottom: -10vh;
   }
