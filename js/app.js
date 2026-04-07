@@ -71,7 +71,8 @@
   const RUNNER_WALK_IN_FRAMES = [2, 3, 4, 5, 6];
   const RUNNER_WALK_LOOP_FRAMES = [4, 3, 4, 5, 6];
   const RUNNER_JUMP_FRAMES = [2, 7, 8, 8, 8, 9, 2];
-  const RUNNER_JUMP_HEIGHT_RATIO = 1 / 3;
+  const RUNNER_JUMP_HEIGHT_RATIO = 0.48;
+  const RUNNER_STONE_VISIBLE_WIDTH_RATIO = 0.3;
   const INLINE_NOTE_HOVER_CLOSE_DELAY = 300;
   const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
   const REVIEW_QUIZ_HINT = 'Смахните карточку или используйте кнопки для перехода между ответами';
@@ -248,6 +249,7 @@
       const stone = document.createElement('span');
       stone.className = 'quiz-runner__stone';
       stone.style.setProperty('--stone-index', String(i));
+      stone.style.setProperty('--stone-path-ratio', String(i / stonesCount));
       frag.appendChild(stone);
     }
     el.runnerStones.appendChild(frag);
@@ -328,18 +330,65 @@
     const x = clampRunnerRatio(t);
     if (x < walkInEnd) {
       const local = x / walkInEnd;
-      return 0.42 * easeInOutCubic(local);
+      return 0.34 * easeInOutCubic(local);
     }
     if (x < jumpEnd) {
       const local = (x - walkInEnd) / (jumpEnd - walkInEnd);
-      return 0.42 + 0.34 * easeInOutCubic(local);
+      return 0.34 + 0.46 * easeInOutCubic(local);
     }
     if (x < walkOutEnd) {
       const local = (x - jumpEnd) / (walkOutEnd - jumpEnd);
-      return 0.76 + 0.21 * easeInOutCubic(local);
+      return 0.8 + 0.17 * easeInOutCubic(local);
     }
     const local = (x - walkOutEnd) / (1 - walkOutEnd);
     return 0.97 + 0.03 * easeInOutCubic(local);
+  }
+
+  function getRunnerJumpWindow(startRatio, targetRatio, targetCompleted) {
+    if (!el.runnerTrack || !el.runnerPanda || !el.runnerStones) return null;
+    const stoneIndex = Math.max(0, Math.min(el.runnerStones.children.length - 1, targetCompleted - 1));
+    const stoneEl = el.runnerStones.children[stoneIndex];
+    if (!stoneEl) return null;
+
+    const ratioSpan = targetRatio - startRatio;
+    if (ratioSpan <= 0.0001) return null;
+
+    const travel = getRunnerTravelPx();
+    const pandaW = el.runnerPanda.clientWidth || 0;
+    if (travel <= 0 || pandaW <= 0) return null;
+
+    const trackRect = el.runnerTrack.getBoundingClientRect();
+    const stoneRect = stoneEl.getBoundingClientRect();
+    if (!trackRect.width || !stoneRect.width) return null;
+
+    const stoneCenterX = stoneRect.left - trackRect.left + stoneRect.width * 0.5;
+    const visibleHalf = stoneRect.width * RUNNER_STONE_VISIBLE_WIDTH_RATIO * 0.5;
+    const pandaCenterOffset = pandaW * 0.5;
+
+    let startGlobal = (stoneCenterX - visibleHalf - pandaCenterOffset) / travel;
+    let endGlobal = (stoneCenterX + visibleHalf - pandaCenterOffset) / travel;
+
+    startGlobal = Math.max(startRatio, Math.min(targetRatio, startGlobal));
+    endGlobal = Math.max(startRatio, Math.min(targetRatio, endGlobal));
+
+    if (endGlobal < startGlobal) {
+      const swap = startGlobal;
+      startGlobal = endGlobal;
+      endGlobal = swap;
+    }
+
+    const minWindow = Math.max(ratioSpan * 0.16, 0.01);
+    if (endGlobal - startGlobal < minWindow) {
+      const center = (startGlobal + endGlobal) * 0.5;
+      startGlobal = Math.max(startRatio, center - minWindow * 0.5);
+      endGlobal = Math.min(targetRatio, center + minWindow * 0.5);
+    }
+
+    let startT = (startGlobal - startRatio) / ratioSpan;
+    let endT = (endGlobal - startRatio) / ratioSpan;
+    startT = Math.max(0.06, Math.min(0.88, startT));
+    endT = Math.max(startT + 0.06, Math.min(0.95, endT));
+    return { startT, endT };
   }
 
   function paintRunnerPosition(immediate) {
@@ -380,8 +429,11 @@
 
     stopRunnerAnimation();
 
-    const walkInEnd = 0.24;
-    const jumpEnd = 0.62;
+    const defaultJumpStart = 0.24;
+    const defaultJumpEnd = 0.62;
+    const jumpWindow = getRunnerJumpWindow(startRatio, targetRatio, targetCompleted);
+    const walkInEnd = jumpWindow ? jumpWindow.startT : defaultJumpStart;
+    const jumpEnd = jumpWindow ? jumpWindow.endT : defaultJumpEnd;
     const walkOutEnd = 0.92;
     const jumpHeight = Math.max(
       8,

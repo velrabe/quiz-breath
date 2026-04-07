@@ -1654,7 +1654,7 @@ button:disabled {
 }
 
 .quiz-runner {
-  width: min(100%, 44rem);
+  width: 100%;
   margin-top: 0.35rem;
 }
 
@@ -1662,9 +1662,12 @@ button:disabled {
   --quiz-runner-steps: 14;
   --quiz-runner-size: min(9dvh, 5.25rem);
   --quiz-runner-overlap: calc(var(--quiz-runner-size) * 0.2);
-  --quiz-runner-grass-h: calc(var(--quiz-runner-size) * 0.72);
-  --quiz-runner-grass-w: calc(var(--quiz-runner-grass-h) * 310 / 192);
-  --quiz-runner-stone-size: calc(var(--quiz-runner-size) * 0.26);
+  /* Пропорции ассетов:
+     панда 243x243, тайл травы 310x84, камень 185x95 */
+  --quiz-runner-grass-w: calc(var(--quiz-runner-size) * 310 / 243);
+  --quiz-runner-grass-h: calc(var(--quiz-runner-grass-w) * 84 / 310);
+  --quiz-runner-stone-w: calc(var(--quiz-runner-grass-w) * 185 / 310);
+  --quiz-runner-stone-h: calc(var(--quiz-runner-stone-w) * 95 / 185);
   position: relative;
   width: 100%;
   height: calc(
@@ -1675,31 +1678,12 @@ button:disabled {
   overflow: visible;
 }
 
-.quiz-runner__track::before {
-  content: '';
-  position: absolute;
-  left: calc(var(--quiz-runner-size) * 0.5);
-  right: calc(var(--quiz-runner-size) * 0.5);
-  bottom: calc(var(--quiz-runner-grass-h) + 0.06rem);
-  height: 0.12rem;
-  border-radius: 999px;
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)) center / 100% 100% no-repeat,
-    repeating-linear-gradient(
-      to right,
-      transparent 0,
-      transparent calc((100% / var(--quiz-runner-steps)) - 1px),
-      rgba(0, 0, 0, 0.12) calc((100% / var(--quiz-runner-steps)) - 1px),
-      rgba(0, 0, 0, 0.12) calc(100% / var(--quiz-runner-steps))
-    );
-}
-
 .quiz-runner__stones {
   position: absolute;
-  left: calc(var(--quiz-runner-size) * 0.5);
-  right: calc(var(--quiz-runner-size) * 0.5);
+  left: 0;
+  right: 0;
   bottom: 0;
-  height: calc(var(--quiz-runner-size) * 0.5);
+  height: calc(var(--quiz-runner-grass-h) + var(--quiz-runner-stone-h));
   z-index: 1;
   pointer-events: none;
 }
@@ -1707,11 +1691,12 @@ button:disabled {
 .quiz-runner__stone {
   position: absolute;
   left: calc(
-    (100% / (var(--quiz-runner-steps) + 1)) * var(--stone-index)
+    (var(--quiz-runner-size) * 0.5) +
+    ((100% - var(--quiz-runner-size)) * var(--stone-path-ratio, 0))
   );
-  bottom: calc(var(--quiz-runner-grass-h) - var(--quiz-runner-stone-size) * 0.5);
-  width: var(--quiz-runner-stone-size);
-  height: var(--quiz-runner-stone-size);
+  bottom: calc(var(--quiz-runner-grass-h) - var(--quiz-runner-stone-h) * 0.8);
+  width: var(--quiz-runner-stone-w);
+  height: var(--quiz-runner-stone-h);
   background-image: url('../img/partners/stone.png');
   background-repeat: no-repeat;
   background-size: contain;
@@ -1722,8 +1707,8 @@ button:disabled {
 
 .quiz-runner__grass {
   position: absolute;
-  left: calc(var(--quiz-runner-size) * 0.5);
-  right: calc(var(--quiz-runner-size) * 0.5);
+  left: 0;
+  right: 0;
   bottom: 0;
   height: var(--quiz-runner-grass-h);
   background-image: url('../img/partners/gras-tile.png');
@@ -3345,6 +3330,9 @@ body.experience {
   .site-footer__row {
     margin: 0;
     padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .site-footer__row {
