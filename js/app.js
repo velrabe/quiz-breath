@@ -38,6 +38,7 @@
     reviewActions: document.getElementById('quiz-review-actions'),
     btnMyth: document.getElementById('btn-myth'),
     btnTruth: document.getElementById('btn-truth'),
+    heroPromoTicket: document.querySelector('.hero-promo__ticket'),
 
     feedbackCard: document.getElementById('feedback-card'),
     feedbackTitle: document.getElementById('feedback-title'),
@@ -62,6 +63,7 @@
   let touchStartY = 0;
   let cardOffsetX = 0;
   const SWIPE_THRESHOLD = 80;
+  const SWIPE_AXIS_LOCK_THRESHOLD = 12;
   let cardAnimating = false;
   let cardFlyTimeoutId = 0;
   let questionAnswered = false;
@@ -77,13 +79,14 @@
   const RUNNER_WALK_FRAMES = [2, 3, 4, 5, 6];
   const RUNNER_STONE_GAP_MULT = 1;
   const RUNNER_STONE_GAP_MULT_MOBILE = 1.6;
+  const RUNNER_STONE_SPRITE_COUNT = 4;
   /** Горизонтальная «привязка» камеры: центр панды в видимой полосе трека (0 — левый край вьюпорта, 1 — правый). */
   const RUNNER_CAMERA_PANDA_ANCHOR_X = 0.38;
   /** Фазы шага (moveT = t): ходьба → прыжок → ходьба. Горизонталь — равномерно за весь шаг (без замедления на стыках фаз). */
-  const RUNNER_PHASE_WALK1_END = 0.2;
+  const RUNNER_PHASE_WALK1_END = 0.16;
   const RUNNER_PHASE_JUMP_END = 0.84;
   const RUNNER_JUMP_FRAMES = [2, 7, 8, 8, 8, 9, 2];
-  const RUNNER_JUMP_HEIGHT_RATIO = 0.42;
+  const RUNNER_JUMP_HEIGHT_RATIO = 0.48;
   const INLINE_NOTE_HOVER_CLOSE_DELAY = 300;
   const MOBILE_LAYOUT_MAX_WIDTH = 767;
   const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
@@ -135,6 +138,18 @@
     if (!inlineNoteCloseTimerId) return;
     window.clearTimeout(inlineNoteCloseTimerId);
     inlineNoteCloseTimerId = 0;
+  }
+
+  function isPopoverAnchorElement(node) {
+    return Boolean(
+      node instanceof Element && node.closest('.inline-note-ref, .quiz-runner__tickets')
+    );
+  }
+
+  function setPopoverAnchorExpanded(anchor, expanded) {
+    if (!(anchor instanceof Element)) return;
+    if (!anchor.classList.contains('inline-note-ref')) return;
+    anchor.setAttribute('aria-expanded', expanded ? 'true' : 'false');
   }
 
   function scheduleInlineNoteClose(delayMs = INLINE_NOTE_HOVER_CLOSE_DELAY) {
@@ -233,25 +248,15 @@
 
   function shouldSyncQuizCardOverflowHint() {
     if (!el.quiz || el.quiz.hidden) return false;
-    if (isMobileQuizLayout()) return true;
-    return Boolean(
-      el.body &&
-        el.body.classList.contains('experience--quiz-active') &&
-        !el.body.classList.contains('experience--result-view'),
-    );
+    return Boolean(questionAnswered || reviewMode);
   }
 
   function syncQuizCardOverflowHint() {
     const cardArea = el.quizCardArea;
-    const cardAreaFrame = el.quizCardAreaFrame;
+    const hintHost = el.quizCardAreaFrame || cardArea;
     if (!cardArea) return;
     if (!shouldSyncQuizCardOverflowHint()) {
-      cardArea.classList.remove(
-        'quiz-card-area--overflowing',
-        'quiz-card-area--overflow-start',
-        'quiz-card-area--overflow-end'
-      );
-      cardAreaFrame?.classList.remove(
+      hintHost?.classList.remove(
         'quiz-card-area--overflowing',
         'quiz-card-area--overflow-start',
         'quiz-card-area--overflow-end'
@@ -262,15 +267,12 @@
     const overflowing = overflowGap > 4;
     const scrolledFromStart = cardArea.scrollTop > 4;
     const scrolledToEnd = cardArea.scrollTop + cardArea.clientHeight >= cardArea.scrollHeight - 4;
-    cardArea.classList.toggle('quiz-card-area--overflowing', overflowing);
-    cardArea.classList.toggle('quiz-card-area--overflow-start', overflowing && scrolledFromStart);
-    cardArea.classList.toggle('quiz-card-area--overflow-end', !overflowing || scrolledToEnd);
-    cardAreaFrame?.classList.toggle('quiz-card-area--overflowing', overflowing);
-    cardAreaFrame?.classList.toggle(
+    hintHost?.classList.toggle('quiz-card-area--overflowing', overflowing);
+    hintHost?.classList.toggle(
       'quiz-card-area--overflow-start',
       overflowing && scrolledFromStart
     );
-    cardAreaFrame?.classList.toggle('quiz-card-area--overflow-end', !overflowing || scrolledToEnd);
+    hintHost?.classList.toggle('quiz-card-area--overflow-end', !overflowing || scrolledToEnd);
   }
 
   function requestQuizCardOverflowHintSync() {
@@ -319,6 +321,12 @@
       for (let i = 0; i < stonesCount; i += 1) {
         const stone = document.createElement('span');
         stone.className = 'quiz-runner__stone';
+        const spriteIndex = Math.floor(Math.random() * RUNNER_STONE_SPRITE_COUNT);
+        const spriteX =
+          RUNNER_STONE_SPRITE_COUNT > 1
+            ? (spriteIndex / (RUNNER_STONE_SPRITE_COUNT - 1)) * 100
+            : 0;
+        stone.style.setProperty('--quiz-runner-stone-sprite-x', `${spriteX}%`);
         frag.appendChild(stone);
       }
       el.runnerStones.appendChild(frag);
@@ -778,7 +786,7 @@
     pop.addEventListener('mouseleave', (event) => {
       if (!isDesktopHoverInput()) return;
       const related = event.relatedTarget;
-      if (related instanceof Element && related.closest('.inline-note-ref')) {
+      if (isPopoverAnchorElement(related)) {
         clearInlineNoteCloseTimer();
         return;
       }
@@ -793,9 +801,10 @@
     clearInlineNoteCloseTimer();
     if (!inlineNotePopoverEl) return;
     inlineNotePopoverEl.hidden = true;
+    inlineNotePopoverEl.classList.remove('inline-note-popover--promo');
     inlineNotePopoverEl.innerHTML = '';
     if (inlineNoteAnchorEl) {
-      inlineNoteAnchorEl.setAttribute('aria-expanded', 'false');
+      setPopoverAnchorExpanded(inlineNoteAnchorEl, false);
       inlineNoteAnchorEl = null;
     }
   }
@@ -805,14 +814,17 @@
     const rect = anchor.getBoundingClientRect();
     const pad = 8;
     const popRect = inlineNotePopoverEl.getBoundingClientRect();
-    let left = rect.left;
-    let top = rect.bottom + 8;
+    const isPromoPopover =
+      inlineNotePopoverEl.classList.contains('inline-note-popover--promo') ||
+      anchor.classList.contains('quiz-runner__tickets');
+    let left = isPromoPopover ? rect.right - popRect.width : rect.left;
+    let top = isPromoPopover ? rect.top + (rect.height - popRect.height) / 2 : rect.bottom + 8;
     if (left + popRect.width > window.innerWidth - pad) {
       left = window.innerWidth - popRect.width - pad;
     }
     if (left < pad) left = pad;
     if (top + popRect.height > window.innerHeight - pad) {
-      top = rect.top - popRect.height - 8;
+      top = isPromoPopover ? window.innerHeight - popRect.height - pad : rect.top - popRect.height - 8;
     }
     if (top < pad) top = pad;
     inlineNotePopoverEl.style.left = `${Math.round(left)}px`;
@@ -824,6 +836,7 @@
     clearInlineNoteCloseTimer();
     const pop = ensureInlineNotePopover();
     pop.innerHTML = '';
+    pop.classList.remove('inline-note-popover--promo');
 
     const text = document.createElement('p');
     text.className = 'inline-note-popover__text';
@@ -841,11 +854,28 @@
     }
 
     if (inlineNoteAnchorEl && inlineNoteAnchorEl !== anchor) {
-      inlineNoteAnchorEl.setAttribute('aria-expanded', 'false');
+      setPopoverAnchorExpanded(inlineNoteAnchorEl, false);
     }
     inlineNoteAnchorEl = anchor;
-    anchor.setAttribute('aria-expanded', 'true');
+    setPopoverAnchorExpanded(anchor, true);
 
+    pop.hidden = false;
+    positionInlineNotePopover(anchor);
+  }
+
+  function openRunnerTicketsPromoPopover(anchor) {
+    if (!anchor || !el.heroPromoTicket) return;
+    clearInlineNoteCloseTimer();
+    const pop = ensureInlineNotePopover();
+    pop.innerHTML = '';
+    pop.classList.add('inline-note-popover--promo');
+    const promoTicket = el.heroPromoTicket.cloneNode(true);
+    promoTicket.classList.add('hero-promo__ticket--popover');
+    pop.appendChild(promoTicket);
+    if (inlineNoteAnchorEl && inlineNoteAnchorEl !== anchor) {
+      setPopoverAnchorExpanded(inlineNoteAnchorEl, false);
+    }
+    inlineNoteAnchorEl = anchor;
     pop.hidden = false;
     positionInlineNotePopover(anchor);
   }
@@ -1250,12 +1280,21 @@
   function bindSwipe() {
     const card = el.card;
     if (!card) return;
+    let touchGestureAxis = '';
+
+    function resetCardSwipeUi() {
+      card.style.transform = '';
+      card.style.opacity = '1';
+      cardOffsetX = 0;
+      if (el.cardText) el.cardText.style.color = '';
+    }
 
     function onDown(clientX, clientY) {
       if (cardAnimating || (questionAnswered && !reviewMode)) return;
       touchStartX = clientX;
       touchStartY = clientY;
       cardOffsetX = 0;
+      touchGestureAxis = '';
     }
 
     function onMove(clientX) {
@@ -1280,9 +1319,7 @@
         } else if (dx > SWIPE_THRESHOLD) {
           goReviewPrev();
         } else {
-          card.style.transform = '';
-          card.style.opacity = '1';
-          if (el.cardText) el.cardText.style.color = '';
+          resetCardSwipeUi();
         }
         return;
       }
@@ -1292,9 +1329,7 @@
       } else if (dx > SWIPE_THRESHOLD) {
         flyCardOutAndAnswer('truth');
       } else {
-        card.style.transform = '';
-        card.style.opacity = '1';
-        if (el.cardText) el.cardText.style.color = '';
+        resetCardSwipeUi();
       }
     }
 
@@ -1311,14 +1346,41 @@
       'touchmove',
       (e) => {
         if (e.touches.length !== 1) return;
-        onMove(e.touches[0].clientX);
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchStartX;
+        const dy = touch.clientY - touchStartY;
+        if (!touchGestureAxis) {
+          if (
+            Math.abs(dx) < SWIPE_AXIS_LOCK_THRESHOLD &&
+            Math.abs(dy) < SWIPE_AXIS_LOCK_THRESHOLD
+          ) {
+            return;
+          }
+          touchGestureAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        }
+        if (touchGestureAxis !== 'x') {
+          return;
+        }
+        e.preventDefault();
+        onMove(touch.clientX);
       },
-      { passive: true }
+      { passive: false }
     );
 
     card.addEventListener('touchend', (e) => {
       if (e.changedTouches.length !== 1) return;
+      const activeAxis = touchGestureAxis;
+      touchGestureAxis = '';
+      if (activeAxis !== 'x') {
+        resetCardSwipeUi();
+        return;
+      }
       onUp(e.changedTouches[0].clientX);
+    });
+
+    card.addEventListener('touchcancel', () => {
+      touchGestureAxis = '';
+      resetCardSwipeUi();
     });
 
     let mouseDown = false;
@@ -1429,9 +1491,30 @@
     scheduleInlineNoteClose();
   });
 
+  el.runnerTickets?.addEventListener('mouseover', (event) => {
+    if (!isDesktopHoverInput()) return;
+    if (!el.runnerTickets?.classList.contains('quiz-runner__tickets--visible')) return;
+    const trigger = event.currentTarget;
+    const related = event.relatedTarget;
+    if (related instanceof Element && trigger.contains(related)) return;
+    openRunnerTicketsPromoPopover(trigger);
+  });
+
+  el.runnerTickets?.addEventListener('mouseout', (event) => {
+    if (!isDesktopHoverInput()) return;
+    const trigger = event.currentTarget;
+    const related = event.relatedTarget;
+    if (related instanceof Element && trigger.contains(related)) {
+      clearInlineNoteCloseTimer();
+      return;
+    }
+    closeInlineNotePopover();
+  });
+
   document.addEventListener('click', (event) => {
     if (
       !event.target.closest('.inline-note-ref') &&
+      !event.target.closest('.quiz-runner__tickets') &&
       !event.target.closest('.inline-note-popover')
     ) {
       closeInlineNotePopover();

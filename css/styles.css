@@ -1706,12 +1706,13 @@ button:disabled {
   --quiz-runner-tail-space: 1.15rem;
   --quiz-runner-ticket-h: min(4.25rem, 11dvh);
   --quiz-runner-ticket-max-w: min(36vw, 6rem);
+  --quiz-runner-stone-scale: 0.6;
   /* Пропорции ассетов:
-     панда 243x243, тайл травы 310x84, камень 185x95 */
+     панда 243x243, тайл травы 310x84, камень (1 кадр) 131x162 */
   --quiz-runner-grass-w: calc(var(--quiz-runner-size) * 310 / 243);
   --quiz-runner-grass-h: calc(var(--quiz-runner-grass-w) * 84 / 310);
-  --quiz-runner-stone-w: calc(var(--quiz-runner-grass-w) * 185 / 310);
-  --quiz-runner-stone-h: calc(var(--quiz-runner-stone-w) * 95 / 185);
+  --quiz-runner-stone-w: calc(var(--quiz-runner-grass-w) * 131 / 310 * var(--quiz-runner-stone-scale));
+  --quiz-runner-stone-h: calc(var(--quiz-runner-stone-w) * 162 / 131);
   position: relative;
   width: 100%;
   height: calc(
@@ -1784,6 +1785,13 @@ button:disabled {
     visibility 0ms linear 0ms;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .quiz-runner__tickets.quiz-runner__tickets--visible {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+}
+
 .quiz-runner__tickets.quiz-runner__tickets--picked {
   opacity: 0;
   transform: scale(0.4);
@@ -1833,8 +1841,8 @@ button:disabled {
   height: var(--quiz-runner-stone-h);
   background-image: url('../img/partners/stone.png');
   background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center bottom;
+  background-size: 400% 100%;
+  background-position: var(--quiz-runner-stone-sprite-x, 0%) bottom;
   opacity: 0.95;
 }
 
@@ -1924,6 +1932,7 @@ button:disabled {
   justify-content: flex-start;
   gap: 1.5rem;
   cursor: grab;
+  touch-action: pan-y;
   will-change: transform;
   z-index: 2;
 }
@@ -2034,6 +2043,34 @@ button:disabled {
   border-radius: 0.9rem;
   background: #fff;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
+}
+
+.inline-note-popover--promo {
+  max-width: min(32rem, calc(100vw - 1rem));
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.inline-note-popover--promo .hero-promo__ticket--popover {
+  transform: scale(0.75);
+  transform-origin: center right;
+  animation: promo-ticket-popover-enter 180ms ease;
+}
+
+@keyframes promo-ticket-popover-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0.75rem, 0, 0) scale(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(0.75);
+  }
 }
 
 .inline-note-popover__text {
@@ -3379,13 +3416,11 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
 }
 
 .experience--quiz-active:not(.experience--result-view) .experience-stage {
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: visible;
 }
 
 .experience--quiz-active:not(.experience--result-view) .experience-stage .page-content {
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: visible;
 }
 
 .experience--quiz-active:not(.experience--result-view) .experience-stage .page-content__inner,
@@ -3400,7 +3435,7 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 24px;
+  gap: 0.75rem;
   column-gap: 125px;
   height: 100%;
   min-height: 0;
@@ -3544,6 +3579,10 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
   transform: translate3d(0, 0, 0);
 }
 
+#screen-quiz:not(.quiz-screen--answered):not(.quiz-screen--review) .quiz-card-overflow-hint {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .experience--quiz-active:not(.experience--result-view) #screen-quiz.screen--quiz {
     height: 100%;
@@ -3590,7 +3629,7 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
   }
 
   .experience-stage .page-main {
-    padding: 3rem 2rem;
+    padding: 1rem;
   }
 
   .experience--result-view .experience-stage .page-main {
@@ -3600,7 +3639,7 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
 
   .site-footer__row {
     margin: 0;
-    padding: 2rem;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -3627,7 +3666,7 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
 
   .site-footer__disclaimer {
     margin-top: 0;
-    padding: 2rem;
+    padding: 0;
     font-size: 0.75rem;
     line-height: 1.4;
   }
