@@ -2311,8 +2311,9 @@ button:disabled {
 }
 
 @media (max-width: 767px) {
+  #screen-quiz.quiz-screen--answered #feedback-media-frame,
   #screen-quiz.quiz-screen--review #feedback-media-frame {
-    margin-bottom: 0.9rem;
+    display: none;
   }
 
   #screen-quiz.quiz-screen--review #feedback-card #feedback-explanation,
@@ -3446,7 +3447,8 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
 }
 
 .experience--quiz-active:not(.experience--result-view) .experience-stage .page-content {
-  overflow: visible;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .experience--quiz-active:not(.experience--result-view) .experience-stage .page-content__inner,
@@ -3500,10 +3502,9 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
   gap: 1rem;
   height: 100%;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  overscroll-behavior: none;
 }
 
 .experience--quiz-active:not(.experience--result-view) #screen-quiz .quiz-card-area-frame {
@@ -3513,7 +3514,7 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
   width: 100%;
   border-radius: 0 0 1rem 1rem;
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: hidden;
   z-index: 1;
 }
 
@@ -3529,7 +3530,8 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
 
 .experience--quiz-active:not(.experience--result-view) #screen-quiz:not(.quiz-screen--answered):not(.quiz-screen--review) .quiz-card-area-frame,
 .experience--quiz-active:not(.experience--result-view) #screen-quiz:not(.quiz-screen--answered):not(.quiz-screen--review) .quiz-card-area {
-  overflow: visible;
+  overflow-x: visible;
+  overflow-y: hidden;
 }
 
 .experience--quiz-active:not(.experience--result-view) #screen-quiz.quiz-screen--answered,
@@ -3547,25 +3549,7 @@ body.experience--quiz-active:not(.experience--result-view) .experience-stage #sc
 .experience--quiz-active:not(.experience--result-view) #screen-quiz.quiz-screen--answered .quiz-card-area,
 .experience--quiz-active:not(.experience--result-view) #screen-quiz.quiz-screen--review .quiz-card-area {
   overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.experience--quiz-active:not(.experience--result-view) #screen-quiz .quiz-card-area::-webkit-scrollbar {
-  width: 0.1rem;
-  height: 0.1rem;
-}
-
-.experience--quiz-active:not(.experience--result-view) #screen-quiz .quiz-card-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.experience--quiz-active:not(.experience--result-view) #screen-quiz .quiz-card-area::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 999px;
-}
-
-.experience--quiz-active:not(.experience--result-view) #screen-quiz .quiz-card-area::-webkit-scrollbar-corner {
-  background: transparent;
+  overflow-y: hidden;
 }
 
 .experience--quiz-active:not(.experience--result-view) #screen-quiz .card-wrap {
