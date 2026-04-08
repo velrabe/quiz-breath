@@ -55,6 +55,7 @@
     resultTitle: document.getElementById('result-title'),
 
     formEl: document.getElementById('lead-form'),
+    btnToForm: document.getElementById('btn-to-form'),
   };
 
   let index = 0;
@@ -239,7 +240,16 @@
       el.body.classList.toggle('experience--result-view', screen === el.result);
       el.body.classList.toggle('quiz-screen-active', screen === el.quiz);
     }
+    if (screen === el.result) syncLeadFormSubmitReadyState();
     requestQuizCardOverflowHintSync();
+  }
+
+  function syncLeadFormSubmitReadyState() {
+    const form = el.formEl;
+    const btn = el.btnToForm;
+    if (!form || !btn) return;
+    const ready = typeof form.checkValidity === 'function' && form.checkValidity();
+    btn.classList.toggle('is-ready', ready);
   }
 
   function isMobileQuizLayout() {
@@ -1574,12 +1584,16 @@
   el.btnReviewNext?.addEventListener('click', goReviewNext);
   el.btnSuccessReview?.addEventListener('click', openReviewExperience);
 
+  el.formEl?.addEventListener('input', syncLeadFormSubmitReadyState);
+  el.formEl?.addEventListener('change', syncLeadFormSubmitReadyState);
+
   el.formEl?.addEventListener('submit', (e) => {
     e.preventDefault();
     if (typeof el.formEl.reportValidity === 'function' && !el.formEl.reportValidity()) return;
     const payload = Object.fromEntries(new FormData(el.formEl).entries());
     window.console.log('Lead form payload', payload);
     el.formEl?.reset();
+    syncLeadFormSubmitReadyState();
     openSuccessExperience();
   });
 
@@ -1595,6 +1609,7 @@
   warmQuestionImages(0, QUESTION_IMAGE_PRELOAD_AHEAD);
   scheduleRemainingQuestionImageWarmup();
   applyNbspInTree(document.body);
+  syncLeadFormSubmitReadyState();
   setExperienceState('experience--landing');
   if (typeof window.QUIZ_HERO_TRANSITION?.reset === 'function') {
     window.QUIZ_HERO_TRANSITION.reset();
