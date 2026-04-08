@@ -168,36 +168,50 @@
                       </button>
                     </div>
                   </div>
-                  <div class="quiz-card-area">
-                    <div class="card-wrap">
-                      <div class="quiz-card-stack">
-                        <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
-                          <div id="feedback-card" class="quiz-card quiz-card--feedback">
-                            <p id="feedback-question-text"></p>
-                            <p class="feedback-head" id="feedback-title"></p>
-                            <p id="feedback-explanation"></p>
-                            <div class="sources-block">
-                              <p class="sources-heading">Источники и ссылки</p>
-                              <div id="feedback-sources" class="sources-tags"></div>
+                  <div class="quiz-card-area-frame">
+                    <div class="quiz-card-area">
+                      <div class="card-wrap">
+                        <div class="quiz-card-stack">
+                          <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
+                            <div id="feedback-card" class="quiz-card quiz-card--feedback">
+                              <p id="feedback-question-text"></p>
+                              <p class="feedback-head" id="feedback-title"></p>
+                              <p id="feedback-explanation"></p>
+                              <div class="card-question-media-frame" id="feedback-media-frame">
+                                <img
+                                  id="feedback-question-media"
+                                  src="img/banners/banner.png"
+                                  width="1600"
+                                  height="900"
+                                  alt=""
+                                  decoding="async"
+                                  hidden
+                                />
+                              </div>
+                              <div class="sources-block">
+                                <p class="sources-heading">Источники и ссылки</p>
+                                <div id="feedback-sources" class="sources-tags"></div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div id="quiz-card">
-                          <div class="card-question-media-frame">
-                            <img
-                              id="card-question-media"
-                              src="img/banners/banner.png"
-                              width="1600"
-                              height="900"
-                              alt=""
-                              decoding="async"
-                            />
+                          <div id="quiz-card">
+                            <div class="card-question-media-frame">
+                              <img
+                                id="card-question-media"
+                                src="img/banners/banner.png"
+                                width="1600"
+                                height="900"
+                                alt=""
+                                decoding="async"
+                              />
+                            </div>
+                            <p id="card-question-text"></p>
                           </div>
-                          <p id="card-question-text"></p>
                         </div>
                       </div>
                     </div>
-                    <div class="quiz-card-overflow-hint" aria-hidden="true"></div>
+                    <div class="quiz-card-overflow-hint quiz-card-overflow-hint--top" aria-hidden="true"></div>
+                    <div class="quiz-card-overflow-hint quiz-card-overflow-hint--bottom" aria-hidden="true"></div>
                   </div>
                   <div class="quiz-bottom">
                     <div class="quiz-buttons quiz-buttons--main quiz-actions-stack">

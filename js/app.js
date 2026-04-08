@@ -21,6 +21,7 @@
     btnSuccessReview: document.getElementById('btn-success-review'),
 
     card: document.getElementById('quiz-card'),
+    quizCardAreaFrame: document.querySelector('#screen-quiz .quiz-card-area-frame'),
     quizCardArea: document.querySelector('#screen-quiz .quiz-card-area'),
     cardImage: document.getElementById('card-question-media'),
     cardText: document.getElementById('card-question-text'),
@@ -41,6 +42,8 @@
     feedbackCard: document.getElementById('feedback-card'),
     feedbackTitle: document.getElementById('feedback-title'),
     feedbackExplain: document.getElementById('feedback-explanation'),
+    feedbackImage: document.getElementById('feedback-question-media'),
+    feedbackMediaFrame: document.getElementById('feedback-media-frame'),
     feedbackSources: document.getElementById('feedback-sources'),
     feedbackSourcesBlock: document.querySelector('#feedback-card .sources-block'),
     feedbackQuestionText: document.getElementById('feedback-question-text'),
@@ -73,10 +76,11 @@
   const RUNNER_TICKETS_POSE_FRAME = 10;
   const RUNNER_WALK_FRAMES = [2, 3, 4, 5, 6];
   const RUNNER_STONE_GAP_MULT = 1;
+  const RUNNER_STONE_GAP_MULT_MOBILE = 1.6;
   /** Горизонтальная «привязка» камеры: центр панды в видимой полосе трека (0 — левый край вьюпорта, 1 — правый). */
   const RUNNER_CAMERA_PANDA_ANCHOR_X = 0.38;
   /** Фазы шага (moveT = t): ходьба → прыжок → ходьба. Горизонталь — равномерно за весь шаг (без замедления на стыках фаз). */
-  const RUNNER_PHASE_WALK1_END = 0.22;
+  const RUNNER_PHASE_WALK1_END = 0.2;
   const RUNNER_PHASE_JUMP_END = 0.84;
   const RUNNER_JUMP_FRAMES = [2, 7, 8, 8, 8, 9, 2];
   const RUNNER_JUMP_HEIGHT_RATIO = 0.42;
@@ -103,6 +107,7 @@
       ? window.matchMedia('(prefers-reduced-motion: reduce)')
       : null;
   let pendingCardImageToken = '';
+  let pendingFeedbackImageToken = '';
   let runnerCompleted = 0;
   let runnerVisualRatio = 0;
   let runnerAnimRafId = 0;
@@ -177,8 +182,8 @@
   const CARD_TINT_MAX = 140;
 
   const RGB_NEUTRAL = { r: 26, g: 26, b: 26 };
-  const RGB_MYTH = { r: 220, g: 38, b: 38 };
-  const RGB_TRUTH = { r: 22, g: 163, b: 74 };
+  const RGB_MYTH = { r: 245, g: 120, b: 66 };
+  const RGB_TRUTH = { r: 122, g: 181, b: 79 };
 
   function lerpChannel(a, b, t) {
     return Math.round(a + (b - a) * t);
@@ -238,16 +243,34 @@
 
   function syncQuizCardOverflowHint() {
     const cardArea = el.quizCardArea;
+    const cardAreaFrame = el.quizCardAreaFrame;
     if (!cardArea) return;
     if (!shouldSyncQuizCardOverflowHint()) {
-      cardArea.classList.remove('quiz-card-area--overflowing', 'quiz-card-area--overflow-end');
+      cardArea.classList.remove(
+        'quiz-card-area--overflowing',
+        'quiz-card-area--overflow-start',
+        'quiz-card-area--overflow-end'
+      );
+      cardAreaFrame?.classList.remove(
+        'quiz-card-area--overflowing',
+        'quiz-card-area--overflow-start',
+        'quiz-card-area--overflow-end'
+      );
       return;
     }
     const overflowGap = cardArea.scrollHeight - cardArea.clientHeight;
     const overflowing = overflowGap > 4;
+    const scrolledFromStart = cardArea.scrollTop > 4;
     const scrolledToEnd = cardArea.scrollTop + cardArea.clientHeight >= cardArea.scrollHeight - 4;
     cardArea.classList.toggle('quiz-card-area--overflowing', overflowing);
+    cardArea.classList.toggle('quiz-card-area--overflow-start', overflowing && scrolledFromStart);
     cardArea.classList.toggle('quiz-card-area--overflow-end', !overflowing || scrolledToEnd);
+    cardAreaFrame?.classList.toggle('quiz-card-area--overflowing', overflowing);
+    cardAreaFrame?.classList.toggle(
+      'quiz-card-area--overflow-start',
+      overflowing && scrolledFromStart
+    );
+    cardAreaFrame?.classList.toggle('quiz-card-area--overflow-end', !overflowing || scrolledToEnd);
   }
 
   function requestQuizCardOverflowHintSync() {
@@ -336,7 +359,10 @@
     if (P <= 1) P = 48;
     if (S <= 1) S = 40;
 
-    const gap = RUNNER_STONE_GAP_MULT * P;
+    const gapMult = isMobileQuizLayout()
+      ? RUNNER_STONE_GAP_MULT_MOBILE
+      : RUNNER_STONE_GAP_MULT;
+    const gap = gapMult * P;
     const padL = P;
     const padR = P;
     const innerW = padL + n * S + Math.max(0, n - 1) * gap + padR;
@@ -954,6 +980,41 @@
     preloadImage(imageSrc).finally(showImage);
   }
 
+  function renderFeedbackMedia(q) {
+    const imageSrc = getQuestionImageSrc(q);
+    if (!el.feedbackImage || !el.feedbackMediaFrame) return;
+
+    pendingFeedbackImageToken = `${q && typeof q.id !== 'undefined' ? q.id : 'default'}:${imageSrc}`;
+    const imageToken = pendingFeedbackImageToken;
+    el.feedbackImage.alt = q.imageAlt || '';
+
+    if (!imageSrc) {
+      el.feedbackImage.hidden = true;
+      el.feedbackImage.removeAttribute('src');
+      el.feedbackMediaFrame.hidden = true;
+      return;
+    }
+
+    const showImage = () => {
+      if (!el.feedbackImage || pendingFeedbackImageToken !== imageToken) return;
+      el.feedbackImage.src = imageSrc;
+      el.feedbackImage.hidden = false;
+      if (el.feedbackMediaFrame) {
+        el.feedbackMediaFrame.hidden = false;
+      }
+    };
+
+    const cached = preloadedQuestionImages.get(imageSrc);
+    if (cached && cached.loaded) {
+      showImage();
+      return;
+    }
+
+    el.feedbackImage.hidden = true;
+    el.feedbackMediaFrame.hidden = true;
+    preloadImage(imageSrc).finally(showImage);
+  }
+
   function renderFeedbackQuestionPreview(q) {
     if (!q || !el.feedbackQuestionText) return;
     el.feedbackQuestionText.textContent = q.text;
@@ -971,6 +1032,7 @@
   function renderQuestionCard(q) {
     if (!q) return;
     renderQuestionMedia(q);
+    renderFeedbackMedia(q);
     renderFeedbackQuestionPreview(q);
     warmQuestionImages(index, QUESTION_IMAGE_PRELOAD_AHEAD);
     if (el.cardText) el.cardText.textContent = q.text;
