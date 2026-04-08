@@ -26,7 +26,9 @@
     cardText: document.getElementById('card-question-text'),
     progress: document.getElementById('quiz-progress'),
     runnerTrack: document.getElementById('quiz-runner-track'),
+    runnerWorld: document.getElementById('quiz-runner-world'),
     runnerStones: document.getElementById('quiz-runner-stones'),
+    runnerTickets: document.getElementById('quiz-runner-tickets'),
     runnerPanda: document.getElementById('quiz-runner-panda'),
     runnerSprite: document.getElementById('quiz-runner-sprite'),
     quizHint: document.getElementById('quiz-swipe-hint'),
@@ -41,8 +43,6 @@
     feedbackExplain: document.getElementById('feedback-explanation'),
     feedbackSources: document.getElementById('feedback-sources'),
     feedbackSourcesBlock: document.querySelector('#feedback-card .sources-block'),
-    feedbackQuestionInline: document.getElementById('feedback-question-inline'),
-    feedbackQuestionMedia: document.getElementById('feedback-question-media'),
     feedbackQuestionText: document.getElementById('feedback-question-text'),
     btnNext: document.getElementById('btn-feedback-next'),
 
@@ -65,15 +65,21 @@
   let reviewMode = false;
   let answers = [];
   const FLY_OUT_MS = 400;
-  const RUNNER_MOVE_MS = 980;
+  const RUNNER_MOVE_MS = 540;
   const RUNNER_SPRITE_COLS = 5;
   const RUNNER_SPRITE_ROWS = 2;
   const RUNNER_IDLE_FRAME = 1;
-  const RUNNER_WALK_IN_FRAMES = [2, 3, 4, 5, 6];
-  const RUNNER_WALK_LOOP_FRAMES = [4, 3, 4, 5, 6];
+  /** Поза после подбора билетов (последняя ячейка спрайтшита 5×2). */
+  const RUNNER_TICKETS_POSE_FRAME = 10;
+  const RUNNER_WALK_FRAMES = [2, 3, 4, 5, 6];
+  const RUNNER_STONE_GAP_MULT = 1;
+  /** Горизонтальная «привязка» камеры: центр панды в видимой полосе трека (0 — левый край вьюпорта, 1 — правый). */
+  const RUNNER_CAMERA_PANDA_ANCHOR_X = 0.38;
+  /** Фазы шага (moveT = t): ходьба → прыжок → ходьба. Горизонталь — равномерно за весь шаг (без замедления на стыках фаз). */
+  const RUNNER_PHASE_WALK1_END = 0.22;
+  const RUNNER_PHASE_JUMP_END = 0.84;
   const RUNNER_JUMP_FRAMES = [2, 7, 8, 8, 8, 9, 2];
-  const RUNNER_JUMP_HEIGHT_RATIO = 0.48;
-  const RUNNER_STONE_VISIBLE_WIDTH_RATIO = 0.3;
+  const RUNNER_JUMP_HEIGHT_RATIO = 0.42;
   const INLINE_NOTE_HOVER_CLOSE_DELAY = 300;
   const MOBILE_LAYOUT_MAX_WIDTH = 767;
   const DEFAULT_QUIZ_HINT = 'Смахните карточку или нажмите кнопку';
@@ -97,11 +103,19 @@
       ? window.matchMedia('(prefers-reduced-motion: reduce)')
       : null;
   let pendingCardImageToken = '';
-  let pendingFeedbackImageToken = '';
   let runnerCompleted = 0;
   let runnerVisualRatio = 0;
   let runnerAnimRafId = 0;
   let runnerAnimToken = 0;
+  let runnerAnimActiveTarget = null;
+  const runnerPendingTargets = [];
+  let runnerTicketsPicked = false;
+  let runnerPandaWidthPx = 0;
+  let runnerStoneWidthPx = 0;
+  let runnerWorldContentWidthPx = 0;
+  let runnerViewportScrollPx = 0;
+  let runnerMilestoneLeftPx = [];
+  let runnerStoneBounds = [];
   let inlineNoteSeed = 0;
   const inlineNoteStore = new Map();
   let inlineNotePopoverEl = null;
@@ -212,11 +226,20 @@
     return window.innerWidth <= MOBILE_LAYOUT_MAX_WIDTH;
   }
 
+  function shouldSyncQuizCardOverflowHint() {
+    if (!el.quiz || el.quiz.hidden) return false;
+    if (isMobileQuizLayout()) return true;
+    return Boolean(
+      el.body &&
+        el.body.classList.contains('experience--quiz-active') &&
+        !el.body.classList.contains('experience--result-view'),
+    );
+  }
+
   function syncQuizCardOverflowHint() {
     const cardArea = el.quizCardArea;
     if (!cardArea) return;
-    const isQuizVisible = Boolean(el.quiz && !el.quiz.hidden);
-    if (!isQuizVisible || !isMobileQuizLayout()) {
+    if (!shouldSyncQuizCardOverflowHint()) {
       cardArea.classList.remove('quiz-card-area--overflowing', 'quiz-card-area--overflow-end');
       return;
     }
@@ -267,18 +290,154 @@
     if (!el.runnerStones) return;
 
     const stonesCount = Math.max(TOTAL, 1);
-    if (el.runnerStones.childElementCount === stonesCount) return;
-
-    el.runnerStones.textContent = '';
-    const frag = document.createDocumentFragment();
-    for (let i = 1; i <= stonesCount; i += 1) {
-      const stone = document.createElement('span');
-      stone.className = 'quiz-runner__stone';
-      stone.style.setProperty('--stone-index', String(i));
-      stone.style.setProperty('--stone-path-ratio', String(i / stonesCount));
-      frag.appendChild(stone);
+    if (el.runnerStones.childElementCount !== stonesCount) {
+      el.runnerStones.textContent = '';
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < stonesCount; i += 1) {
+        const stone = document.createElement('span');
+        stone.className = 'quiz-runner__stone';
+        frag.appendChild(stone);
+      }
+      el.runnerStones.appendChild(frag);
     }
-    el.runnerStones.appendChild(frag);
+  }
+
+  function syncRunnerLayout() {
+    updateRunnerSegments();
+    layoutRunnerWorld();
+  }
+
+  function measureRunnerBasePx() {
+    if (!el.runnerTrack || !el.runnerPanda) return;
+
+    const probe = document.createElement('div');
+    probe.className = 'quiz-runner__stone';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;';
+    el.runnerTrack.appendChild(probe);
+    const sRect = probe.getBoundingClientRect();
+    runnerStoneWidthPx = Math.round(sRect.width) || 0;
+    el.runnerTrack.removeChild(probe);
+
+    void el.runnerPanda.offsetWidth;
+    const pRect = el.runnerPanda.getBoundingClientRect();
+    runnerPandaWidthPx = Math.round(pRect.width) || 0;
+  }
+
+  function layoutRunnerWorld() {
+    if (!el.runnerWorld || !el.runnerTrack || !el.runnerStones || !el.runnerPanda) return;
+
+    void el.runnerTrack.offsetHeight;
+    measureRunnerBasePx();
+
+    const n = Math.max(TOTAL, 1);
+    let P = runnerPandaWidthPx;
+    let S = runnerStoneWidthPx;
+    if (P <= 1) P = 48;
+    if (S <= 1) S = 40;
+
+    const gap = RUNNER_STONE_GAP_MULT * P;
+    const padL = P;
+    const padR = P;
+    const innerW = padL + n * S + Math.max(0, n - 1) * gap + padR;
+
+    runnerWorldContentWidthPx = innerW;
+    el.runnerWorld.style.width = `${Math.round(innerW)}px`;
+    el.runnerTrack.style.setProperty('--quiz-runner-world-w', `${Math.round(innerW)}px`);
+
+    runnerStoneBounds = [];
+    for (let i = 0; i < n; i += 1) {
+      const stone = el.runnerStones.children[i];
+      if (!stone) continue;
+      const left = padL + i * (S + gap);
+      const stoneW = S;
+      stone.style.left = `${Math.round(left)}px`;
+      stone.style.width = `${Math.round(stoneW)}px`;
+      runnerStoneBounds.push({ left, right: left + stoneW });
+    }
+
+    const mLeft = [];
+    mLeft[0] = Math.max(
+      0,
+      Math.round(runnerStoneBounds[0].left * 0.5 - P * 0.5 - S * 0.34)
+    );
+    for (let k = 1; k < n; k += 1) {
+      const a = runnerStoneBounds[k - 1];
+      const b = runnerStoneBounds[k];
+      const gapCenter = (a.right + b.left) * 0.5;
+      mLeft[k] = Math.round(gapCenter - P * 0.5);
+    }
+    const lastStone = runnerStoneBounds[n - 1];
+    const endGapCenter = (lastStone.right + innerW) * 0.5;
+    mLeft[n] = Math.round(endGapCenter - P * 0.5);
+    while (mLeft.length <= TOTAL) {
+      mLeft.push(mLeft[mLeft.length - 1]);
+    }
+    runnerMilestoneLeftPx = mLeft;
+  }
+
+  function milestoneLeftAt(completedFloat) {
+    if (!runnerMilestoneLeftPx.length) return 0;
+    const u = Math.min(TOTAL, Math.max(0, Number(completedFloat) || 0));
+    if (TOTAL <= 0) return 0;
+    const i = Math.floor(u);
+    const f = u - i;
+    if (i >= TOTAL) return runnerMilestoneLeftPx[TOTAL];
+    const a = runnerMilestoneLeftPx[i];
+    const b = runnerMilestoneLeftPx[Math.min(i + 1, TOTAL)];
+    return a + (b - a) * f;
+  }
+
+  function applyRunnerViewportScroll(pandaLeftEdgePx) {
+    if (!el.runnerWorld || !el.runnerTrack || !el.runnerPanda) return;
+    const viewW = el.runnerTrack.clientWidth;
+    const maxScroll = Math.max(0, runnerWorldContentWidthPx - viewW);
+    let P = runnerPandaWidthPx > 1 ? runnerPandaWidthPx : 0;
+    if (P <= 1) {
+      P = Math.round(el.runnerPanda.getBoundingClientRect().width) || 48;
+    }
+    const left = Number(pandaLeftEdgePx) || 0;
+    const centerWorld = left + P * 0.5;
+    const anchorX = RUNNER_CAMERA_PANDA_ANCHOR_X * viewW;
+    let scroll = centerWorld - anchorX;
+    scroll = Math.min(maxScroll, Math.max(0, scroll));
+    runnerViewportScrollPx = scroll;
+    const tx = `translate3d(${-Math.round(scroll)}px, 0, 0)`;
+    el.runnerWorld.style.transform = tx;
+  }
+
+  function applyRunnerPose(leftEdgePx, jumpYPx) {
+    applyRunnerViewportScroll(leftEdgePx);
+    applyRunnerTransform(leftEdgePx, jumpYPx);
+  }
+
+  function resetRunnerTicketsDecor() {
+    runnerTicketsPicked = false;
+    el.runnerTickets?.classList.remove(
+      'quiz-runner__tickets--visible',
+      'quiz-runner__tickets--picked',
+      'quiz-runner__tickets--pulsing'
+    );
+  }
+
+  function updateQuizRunnerTicketsUi() {
+    if (!el.runnerTickets || !el.quiz || el.quiz.hidden) return;
+    const showTickets = !runnerTicketsPicked && !reviewMode;
+    const pulseTickets =
+      !runnerTicketsPicked &&
+      !reviewMode &&
+      runnerCompleted < Math.max(TOTAL - 1, 0) &&
+      index < Math.max(TOTAL - 1, 0);
+    el.runnerTickets.classList.toggle('quiz-runner__tickets--visible', showTickets);
+    el.runnerTickets.classList.toggle('quiz-runner__tickets--pulsing', pulseTickets);
+  }
+
+  function pickupRunnerTicketsOnFinish() {
+    if (runnerTicketsPicked || !el.runnerTickets) return;
+    runnerTicketsPicked = true;
+    el.runnerTickets.classList.remove('quiz-runner__tickets--visible');
+    el.runnerTickets.classList.add('quiz-runner__tickets--picked');
+    setRunnerSpriteFrame(RUNNER_TICKETS_POSE_FRAME);
   }
 
   function isRunnerReducedMotion() {
@@ -287,11 +446,6 @@
 
   function clampRunnerRatio(value) {
     return Math.min(1, Math.max(0, Number(value) || 0));
-  }
-
-  function getRunnerTravelPx() {
-    if (!el.runnerTrack || !el.runnerPanda) return 0;
-    return Math.max(0, el.runnerTrack.clientWidth - el.runnerPanda.clientWidth);
   }
 
   function setRunnerSpriteFrame(frameNumber) {
@@ -308,9 +462,9 @@
     el.runnerSprite.style.backgroundPosition = `${x}% ${y}%`;
   }
 
-  function applyRunnerTransform(ratio, jumpYPx) {
+  function applyRunnerTransform(leftEdgePx, jumpYPx) {
     if (!el.runnerPanda) return;
-    const x = Math.round(getRunnerTravelPx() * clampRunnerRatio(ratio));
+    const x = Math.round((Number(leftEdgePx) || 0) - runnerViewportScrollPx);
     const y = Math.round(Number(jumpYPx) || 0);
     el.runnerPanda.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
@@ -321,6 +475,7 @@
       runnerAnimRafId = 0;
     }
     runnerAnimToken += 1;
+    runnerAnimActiveTarget = null;
   }
 
   function easeInOutCubic(t) {
@@ -338,94 +493,33 @@
 
   function computeJumpOffset(localProgress, jumpHeight) {
     const local = clampRunnerRatio(localProgress);
-    const apexStart = 0.42;
-    const apexEnd = 0.6;
-
-    if (local <= apexStart) {
-      const rise = local / apexStart;
-      return -jumpHeight * Math.sin((Math.PI / 2) * rise);
-    }
-    if (local <= apexEnd) {
-      return -jumpHeight;
-    }
-    const fall = (local - apexEnd) / (1 - apexEnd);
-    return -jumpHeight * Math.cos((Math.PI / 2) * fall);
+    return -jumpHeight * Math.sin(Math.PI * local);
   }
 
-  function runnerMoveProgress(t, walkInEnd, jumpEnd, walkOutEnd) {
-    const x = clampRunnerRatio(t);
-    if (x < walkInEnd) {
-      const local = x / walkInEnd;
-      return 0.34 * easeInOutCubic(local);
+  /** Горизонталь: равномерная скорость на всём шаге, вертикаль задаётся фазой прыжка. */
+  function runnerStepLeftAt(moveT, startX, endX) {
+    const totalDX = endX - startX;
+    if (Math.abs(totalDX) <= 0.5) {
+      return startX;
     }
-    if (x < jumpEnd) {
-      const local = (x - walkInEnd) / (jumpEnd - walkInEnd);
-      return 0.34 + 0.46 * easeInOutCubic(local);
-    }
-    if (x < walkOutEnd) {
-      const local = (x - jumpEnd) / (walkOutEnd - jumpEnd);
-      return 0.8 + 0.17 * easeInOutCubic(local);
-    }
-    const local = (x - walkOutEnd) / (1 - walkOutEnd);
-    return 0.97 + 0.03 * easeInOutCubic(local);
-  }
-
-  function getRunnerJumpWindow(startRatio, targetRatio, targetCompleted) {
-    if (!el.runnerTrack || !el.runnerPanda || !el.runnerStones) return null;
-    const stoneIndex = Math.max(0, Math.min(el.runnerStones.children.length - 1, targetCompleted - 1));
-    const stoneEl = el.runnerStones.children[stoneIndex];
-    if (!stoneEl) return null;
-
-    const ratioSpan = targetRatio - startRatio;
-    if (ratioSpan <= 0.0001) return null;
-
-    const travel = getRunnerTravelPx();
-    const pandaW = el.runnerPanda.clientWidth || 0;
-    if (travel <= 0 || pandaW <= 0) return null;
-
-    const trackRect = el.runnerTrack.getBoundingClientRect();
-    const stoneRect = stoneEl.getBoundingClientRect();
-    if (!trackRect.width || !stoneRect.width) return null;
-
-    const stoneCenterX = stoneRect.left - trackRect.left + stoneRect.width * 0.5;
-    const visibleHalf = stoneRect.width * RUNNER_STONE_VISIBLE_WIDTH_RATIO * 0.5;
-    const pandaCenterOffset = pandaW * 0.5;
-
-    let startGlobal = (stoneCenterX - visibleHalf - pandaCenterOffset) / travel;
-    let endGlobal = (stoneCenterX + visibleHalf - pandaCenterOffset) / travel;
-
-    startGlobal = Math.max(startRatio, Math.min(targetRatio, startGlobal));
-    endGlobal = Math.max(startRatio, Math.min(targetRatio, endGlobal));
-
-    if (endGlobal < startGlobal) {
-      const swap = startGlobal;
-      startGlobal = endGlobal;
-      endGlobal = swap;
-    }
-
-    const minWindow = Math.max(ratioSpan * 0.16, 0.01);
-    if (endGlobal - startGlobal < minWindow) {
-      const center = (startGlobal + endGlobal) * 0.5;
-      startGlobal = Math.max(startRatio, center - minWindow * 0.5);
-      endGlobal = Math.min(targetRatio, center + minWindow * 0.5);
-    }
-
-    let startT = (startGlobal - startRatio) / ratioSpan;
-    let endT = (endGlobal - startRatio) / ratioSpan;
-    startT = Math.max(0.06, Math.min(0.88, startT));
-    endT = Math.max(startT + 0.06, Math.min(0.95, endT));
-    return { startT, endT };
+    return startX + totalDX * clampRunnerRatio(moveT);
   }
 
   function paintRunnerPosition(immediate) {
     if (!el.runnerPanda || !el.runnerSprite) return;
     if (immediate) {
       stopRunnerAnimation();
+      runnerPendingTargets.length = 0;
     }
-    const ratio = TOTAL > 0 ? clampRunnerRatio(runnerCompleted / TOTAL) : 0;
-    runnerVisualRatio = ratio;
-    applyRunnerTransform(ratio, 0);
-    setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+    const left = milestoneLeftAt(runnerCompleted);
+    runnerVisualRatio = TOTAL > 0 ? clampRunnerRatio(runnerCompleted / TOTAL) : 0;
+    applyRunnerPose(left, 0);
+    const settledFrame =
+      runnerTicketsPicked && runnerCompleted >= TOTAL
+        ? RUNNER_TICKETS_POSE_FRAME
+        : RUNNER_IDLE_FRAME;
+    setRunnerSpriteFrame(settledFrame);
+    updateQuizRunnerTicketsUi();
   }
 
   function setRunnerProgress(completedCount, immediate) {
@@ -433,34 +527,44 @@
     paintRunnerPosition(Boolean(immediate));
   }
 
-  function runRunnerTo(completedCount) {
-    const targetCompleted = Math.min(Math.max(completedCount, 0), TOTAL);
+  function beginRunnerAnimationTo(targetCompleted) {
+    if (!el.runnerPanda || !el.runnerSprite) return;
+
     const targetRatio = TOTAL > 0 ? clampRunnerRatio(targetCompleted / TOTAL) : 0;
-    const startRatio = clampRunnerRatio(runnerVisualRatio);
-    runnerCompleted = targetCompleted;
+    const startRatio = TOTAL > 0 ? clampRunnerRatio(runnerCompleted / TOTAL) : 0;
+    runnerAnimActiveTarget = targetCompleted;
 
-    if (!el.runnerPanda || !el.runnerSprite || targetRatio <= startRatio + 0.0005) {
+    if (targetRatio <= startRatio + 0.0005) {
+      runnerAnimActiveTarget = null;
+      runnerCompleted = targetCompleted;
       runnerVisualRatio = targetRatio;
-      applyRunnerTransform(targetRatio, 0);
-      setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+      applyRunnerPose(milestoneLeftAt(targetCompleted), 0);
+      if (targetCompleted >= TOTAL) {
+        pickupRunnerTicketsOnFinish();
+      } else {
+        setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+      }
+      updateQuizRunnerTicketsUi();
+      while (runnerPendingTargets.length) {
+        const nextT = runnerPendingTargets.shift();
+        if (nextT > runnerCompleted) {
+          runnerAnimToken += 1;
+          beginRunnerAnimationTo(nextT);
+          return;
+        }
+      }
       return;
     }
 
-    if (isRunnerReducedMotion()) {
-      runnerVisualRatio = targetRatio;
-      applyRunnerTransform(targetRatio, 0);
-      setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
-      return;
+    if (el.runnerTrack) {
+      void el.runnerTrack.offsetHeight;
     }
+    layoutRunnerWorld();
 
-    stopRunnerAnimation();
+    const startX = milestoneLeftAt(runnerCompleted);
+    const endX = milestoneLeftAt(targetCompleted);
+    runnerVisualRatio = startRatio;
 
-    const defaultJumpStart = 0.24;
-    const defaultJumpEnd = 0.62;
-    const jumpWindow = getRunnerJumpWindow(startRatio, targetRatio, targetCompleted);
-    const walkInEnd = jumpWindow ? jumpWindow.startT : defaultJumpStart;
-    const jumpEnd = jumpWindow ? jumpWindow.endT : defaultJumpEnd;
-    const walkOutEnd = 0.92;
     const jumpHeight = Math.max(
       8,
       Math.round((el.runnerPanda.clientHeight || 0) * RUNNER_JUMP_HEIGHT_RATIO)
@@ -473,33 +577,52 @@
 
       const elapsed = now - startedAt;
       const t = clampRunnerRatio(elapsed / RUNNER_MOVE_MS);
-      const moveT = runnerMoveProgress(t, walkInEnd, jumpEnd, walkOutEnd);
-      const ratio = startRatio + (targetRatio - startRatio) * moveT;
+      const moveT = t;
+      const globalR = startRatio + (targetRatio - startRatio) * moveT;
+      const left = runnerStepLeftAt(moveT, startX, endX);
 
       let frame = RUNNER_IDLE_FRAME;
       let jumpY = 0;
 
-      if (t < walkInEnd) {
-        const local = t / walkInEnd;
-        frame = frameFromSequence(RUNNER_WALK_IN_FRAMES, local);
-      } else if (t < jumpEnd) {
-        const local = (t - walkInEnd) / (jumpEnd - walkInEnd);
+      if (moveT < RUNNER_PHASE_WALK1_END) {
+        const span = RUNNER_PHASE_WALK1_END;
+        const local = span > 1e-6 ? Math.min(1, moveT / span) : 0;
+        frame = frameFromSequence(RUNNER_WALK_FRAMES, local);
+      } else if (moveT < RUNNER_PHASE_JUMP_END) {
+        const span = RUNNER_PHASE_JUMP_END - RUNNER_PHASE_WALK1_END;
+        const local = span > 1e-6 ? (moveT - RUNNER_PHASE_WALK1_END) / span : 1;
         frame = frameFromSequence(RUNNER_JUMP_FRAMES, local);
         jumpY = computeJumpOffset(local, jumpHeight);
-      } else if (t < walkOutEnd) {
-        const local = (t - jumpEnd) / (walkOutEnd - jumpEnd);
-        frame = frameFromSequence(RUNNER_WALK_LOOP_FRAMES, local);
+      } else {
+        const span = 1 - RUNNER_PHASE_JUMP_END;
+        const local = span > 1e-6 ? Math.min(1, (moveT - RUNNER_PHASE_JUMP_END) / span) : 0;
+        frame = frameFromSequence(RUNNER_WALK_FRAMES, local);
       }
 
-      runnerVisualRatio = ratio;
-      applyRunnerTransform(ratio, jumpY);
+      runnerVisualRatio = globalR;
+      applyRunnerPose(left, jumpY);
       setRunnerSpriteFrame(frame);
 
       if (t >= 1) {
         runnerAnimRafId = 0;
+        runnerCompleted = targetCompleted;
+        runnerAnimActiveTarget = null;
         runnerVisualRatio = targetRatio;
-        applyRunnerTransform(targetRatio, 0);
-        setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+        applyRunnerPose(milestoneLeftAt(targetCompleted), 0);
+        if (targetCompleted >= TOTAL) {
+          pickupRunnerTicketsOnFinish();
+        } else {
+          setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+        }
+        updateQuizRunnerTicketsUi();
+        while (runnerPendingTargets.length) {
+          const nextT = runnerPendingTargets.shift();
+          if (nextT > runnerCompleted) {
+            runnerAnimToken += 1;
+            beginRunnerAnimationTo(nextT);
+            return;
+          }
+        }
         return;
       }
 
@@ -507,6 +630,57 @@
     };
 
     runnerAnimRafId = window.requestAnimationFrame(tick);
+  }
+
+  function runRunnerTo(completedCount) {
+    const targetCompleted = Math.min(Math.max(completedCount, 0), TOTAL);
+    if (!el.runnerPanda || !el.runnerSprite) return;
+
+    const targetRatio = TOTAL > 0 ? clampRunnerRatio(targetCompleted / TOTAL) : 0;
+    const startRatio = TOTAL > 0 ? clampRunnerRatio(runnerCompleted / TOTAL) : 0;
+
+    if (targetRatio <= startRatio + 0.0005) {
+      runnerCompleted = targetCompleted;
+      runnerVisualRatio = targetRatio;
+      applyRunnerPose(milestoneLeftAt(targetCompleted), 0);
+      if (targetCompleted >= TOTAL) {
+        pickupRunnerTicketsOnFinish();
+      } else {
+        setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+      }
+      updateQuizRunnerTicketsUi();
+      return;
+    }
+
+    if (isRunnerReducedMotion()) {
+      stopRunnerAnimation();
+      runnerCompleted = targetCompleted;
+      runnerVisualRatio = targetRatio;
+      applyRunnerPose(milestoneLeftAt(targetCompleted), 0);
+      if (targetCompleted >= TOTAL) {
+        pickupRunnerTicketsOnFinish();
+      } else {
+        setRunnerSpriteFrame(RUNNER_IDLE_FRAME);
+      }
+      updateQuizRunnerTicketsUi();
+      return;
+    }
+
+    if (runnerAnimRafId) {
+      const last =
+        runnerPendingTargets.length > 0
+          ? runnerPendingTargets[runnerPendingTargets.length - 1]
+          : runnerAnimActiveTarget !== null
+            ? runnerAnimActiveTarget
+            : runnerCompleted;
+      if (targetCompleted > last) {
+        runnerPendingTargets.push(targetCompleted);
+      }
+      return;
+    }
+
+    stopRunnerAnimation();
+    beginRunnerAnimationTo(targetCompleted);
   }
 
   function setQuizAnsweredState(answered) {
@@ -781,34 +955,8 @@
   }
 
   function renderFeedbackQuestionPreview(q) {
-    if (!q || !el.feedbackQuestionText || !el.feedbackQuestionMedia) return;
+    if (!q || !el.feedbackQuestionText) return;
     el.feedbackQuestionText.textContent = q.text;
-
-    const imageSrc = getQuestionImageSrc(q);
-    pendingFeedbackImageToken = `${q && typeof q.id !== 'undefined' ? q.id : 'default'}:${imageSrc}`;
-    const imageToken = pendingFeedbackImageToken;
-    el.feedbackQuestionMedia.alt = q.imageAlt || '';
-
-    if (!imageSrc) {
-      el.feedbackQuestionMedia.hidden = true;
-      el.feedbackQuestionMedia.removeAttribute('src');
-      return;
-    }
-
-    const showImage = () => {
-      if (!el.feedbackQuestionMedia || pendingFeedbackImageToken !== imageToken) return;
-      el.feedbackQuestionMedia.src = imageSrc;
-      el.feedbackQuestionMedia.hidden = false;
-    };
-
-    const cached = preloadedQuestionImages.get(imageSrc);
-    if (cached && cached.loaded) {
-      showImage();
-      return;
-    }
-
-    el.feedbackQuestionMedia.hidden = true;
-    preloadImage(imageSrc).finally(showImage);
   }
 
   function populateFeedbackSources(sources) {
@@ -881,6 +1029,7 @@
     reviewMode = false;
     cardAnimating = false;
     questionAnswered = false;
+    syncRunnerLayout();
     const q = questions[index];
     renderQuestionCard(q);
     primeFeedback(q);
@@ -894,7 +1043,10 @@
       el.quizCardArea.scrollTop = 0;
     }
     setProgress();
-    paintRunnerPosition(true);
+    if (!runnerAnimRafId) {
+      paintRunnerPosition(true);
+    }
+    updateQuizRunnerTicketsUi();
     requestQuizCardOverflowHintSync();
   }
 
@@ -904,6 +1056,7 @@
       window.clearTimeout(cardFlyTimeoutId);
       cardFlyTimeoutId = 0;
     }
+    syncRunnerLayout();
     reviewMode = true;
     cardAnimating = false;
     questionAnswered = true;
@@ -932,6 +1085,7 @@
       el.btnReviewNext.disabled = index >= TOTAL - 1;
     }
     paintRunnerPosition(true);
+    updateQuizRunnerTicketsUi();
     requestQuizCardOverflowHintSync();
   }
 
@@ -1133,13 +1287,15 @@
     score = 0;
     answers = [];
     reviewMode = false;
-    setRunnerProgress(0, true);
     if (el.pageContent) {
       el.pageContent.scrollTop = 0;
     }
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     setExperienceState('experience--quiz-active');
     showScreen(el.quiz);
+    syncRunnerLayout();
+    resetRunnerTicketsDecor();
+    setRunnerProgress(0, true);
     renderCard();
   }
 
@@ -1255,9 +1411,11 @@
       el.pageContent.scrollTop = 0;
     }
     index = 0;
-    setRunnerProgress(TOTAL, true);
     setExperienceState('experience--quiz-active');
     showScreen(el.quiz);
+    syncRunnerLayout();
+    resetRunnerTicketsDecor();
+    setRunnerProgress(TOTAL, true);
     renderReviewCard();
   }
 
@@ -1282,9 +1440,10 @@
 
   bindSwipe();
   el.quizCardArea?.addEventListener('scroll', syncQuizCardOverflowHint, { passive: true });
-  updateRunnerSegments();
+  syncRunnerLayout();
   setRunnerProgress(0, true);
   window.addEventListener('resize', () => {
+    syncRunnerLayout();
     paintRunnerPosition(true);
     requestQuizCardOverflowHintSync();
   });

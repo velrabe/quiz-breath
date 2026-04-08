@@ -139,8 +139,24 @@
                         <span id="quiz-progress">Вопрос 1 из 14</span>
                         <div class="quiz-runner" aria-hidden="true">
                           <div class="quiz-runner__track" id="quiz-runner-track">
-                            <div class="quiz-runner__stones" id="quiz-runner-stones"></div>
-                            <div class="quiz-runner__grass"></div>
+                            <div class="quiz-runner__world" id="quiz-runner-world">
+                              <div class="quiz-runner__stones" id="quiz-runner-stones"></div>
+                              <div class="quiz-runner__grass"></div>
+                            </div>
+                            <div
+                              class="quiz-runner__tickets"
+                              id="quiz-runner-tickets"
+                              aria-hidden="true"
+                            >
+                              <img
+                                class="quiz-runner__tickets-img"
+                                src="img/hero/tickets.png"
+                                alt=""
+                                width="96"
+                                height="96"
+                                decoding="async"
+                              />
+                            </div>
                             <div class="quiz-runner__panda" id="quiz-runner-panda">
                               <span class="quiz-runner__sprite" id="quiz-runner-sprite"></span>
                             </div>
@@ -156,20 +172,8 @@
                     <div class="card-wrap">
                       <div class="quiz-card-stack">
                         <div id="quiz-feedback-inline" class="quiz-feedback-inline" aria-live="polite">
-                          <div class="feedback-question-inline" id="feedback-question-inline">
-                            <div class="feedback-question-inline__media-frame">
-                              <img
-                                id="feedback-question-media"
-                                src="img/banners/banner.png"
-                                width="1600"
-                                height="900"
-                                alt=""
-                                decoding="async"
-                              />
-                            </div>
-                            <p id="feedback-question-text"></p>
-                          </div>
                           <div id="feedback-card" class="quiz-card quiz-card--feedback">
+                            <p id="feedback-question-text"></p>
                             <p class="feedback-head" id="feedback-title"></p>
                             <p id="feedback-explanation"></p>
                             <div class="sources-block">
