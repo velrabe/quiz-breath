@@ -535,6 +535,7 @@ a:hover {
     margin-right: auto;
     width: 100%;
     max-width: none;
+    flex-wrap: nowrap;
   }
 
   .hero-promo__ticket {
