@@ -111,7 +111,6 @@
       ? window.matchMedia('(prefers-reduced-motion: reduce)')
       : null;
   let pendingCardImageToken = '';
-  let pendingFeedbackImageToken = '';
   let runnerCompleted = 0;
   let runnerVisualRatio = 0;
   let runnerAnimRafId = 0;
@@ -770,7 +769,12 @@
 
   function resetFeedbackCardState() {
     if (!el.feedbackCard) return;
-    el.feedbackCard.classList.remove('feedback--myth', 'feedback--truth');
+    el.feedbackCard.classList.remove(
+      'feedback--myth',
+      'feedback--truth',
+      'feedback--result-correct',
+      'feedback--result-incorrect'
+    );
   }
 
   function escapeHtml(text) {
@@ -1020,39 +1024,11 @@
     preloadImage(imageSrc).finally(showImage);
   }
 
-  function renderFeedbackMedia(q) {
-    const imageSrc = getQuestionImageSrc(q);
+  function renderFeedbackMedia() {
     if (!el.feedbackImage || !el.feedbackMediaFrame) return;
-
-    pendingFeedbackImageToken = `${q && typeof q.id !== 'undefined' ? q.id : 'default'}:${imageSrc}`;
-    const imageToken = pendingFeedbackImageToken;
-    el.feedbackImage.alt = q.imageAlt || '';
-
-    if (!imageSrc) {
-      el.feedbackImage.hidden = true;
-      el.feedbackImage.removeAttribute('src');
-      el.feedbackMediaFrame.hidden = true;
-      return;
-    }
-
-    const showImage = () => {
-      if (!el.feedbackImage || pendingFeedbackImageToken !== imageToken) return;
-      el.feedbackImage.src = imageSrc;
-      el.feedbackImage.hidden = false;
-      if (el.feedbackMediaFrame) {
-        el.feedbackMediaFrame.hidden = false;
-      }
-    };
-
-    const cached = preloadedQuestionImages.get(imageSrc);
-    if (cached && cached.loaded) {
-      showImage();
-      return;
-    }
-
     el.feedbackImage.hidden = true;
+    el.feedbackImage.removeAttribute('src');
     el.feedbackMediaFrame.hidden = true;
-    preloadImage(imageSrc).finally(showImage);
   }
 
   function renderFeedbackQuestionPreview(q) {
@@ -1072,7 +1048,7 @@
   function renderQuestionCard(q) {
     if (!q) return;
     renderQuestionMedia(q);
-    renderFeedbackMedia(q);
+    renderFeedbackMedia();
     renderFeedbackQuestionPreview(q);
     warmQuestionImages(index, QUESTION_IMAGE_PRELOAD_AHEAD);
     if (el.cardText) el.cardText.textContent = q.text;
@@ -1083,11 +1059,6 @@
     if (el.feedbackTitle) el.feedbackTitle.textContent = '';
     setFeedbackExplanation(q.explanation, q.sources);
     resetFeedbackCardState();
-    if (el.feedbackCard) {
-      el.feedbackCard.classList.add(
-        q.correct === 'myth' ? 'feedback--myth' : 'feedback--truth'
-      );
-    }
     populateFeedbackSources(q.sources);
   }
 
@@ -1098,11 +1069,12 @@
 
   function populateFeedback(q, correct) {
     if (!q) return;
+    resetFeedbackCardState();
     el.feedbackTitle.textContent = bindShortWords(feedbackHeading(q, correct));
     setFeedbackExplanation(q.explanation, q.sources);
     if (el.feedbackCard) {
-      el.feedbackCard.classList.toggle('feedback--myth', q.correct === 'myth');
-      el.feedbackCard.classList.toggle('feedback--truth', q.correct === 'truth');
+      el.feedbackCard.classList.toggle('feedback--result-correct', correct === true);
+      el.feedbackCard.classList.toggle('feedback--result-incorrect', correct === false);
     }
     populateFeedbackSources(q.sources);
   }
